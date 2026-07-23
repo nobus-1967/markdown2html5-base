@@ -90,6 +90,9 @@ Typography replacements:
 
 See package's [README](./markdown2html5-base/README.md) for details.
 
+All markup elements used in this library are listed in 
+[Full Markdown Functionality Reference](./markdown2html5-base.pdf)
+
 ## Acknowledgements
 
 Thanks to  Matt Cone for his excellent 
