@@ -51,8 +51,8 @@ Blockquote:
 
 Code block:
 
-```python3
-print('Hello')
+```python
+print('Hello, World!')
 ```
 
 => `<pre><code>print('Hello')</code></pre>`
@@ -60,11 +60,13 @@ print('Hello')
 Table with footer
 
 ```
-| Product | Qty | Price |
-| :------ | :-: | ----: |
-| Apples  | 2   | $3.00 |
-|=========|=====|=======|
-| Total   | 6   | $8.50 |
+| Product  | Qty | Price |
+| :------- | :-: | ----: |
+| Apples   | 2   | $3.00 |
+| Bananas  | 3   | $1.50 |
+| Cherries | 1   | $4.00 |
+|==========|=====|=======|
+| Total    | 6   | $8.50 |
 ```
 
 Renders as `<table>` with `<thead>`, `<tbody>`, and `<tfoot>`.
@@ -90,8 +92,39 @@ Typography replacements:
 
 See package's [README](./markdown2html5-base/README.md) for details.
 
-All markup elements used in this library are listed in 
+## How it works
+
+All markup elements used in this library are listed in
 [Full Markdown Functionality Reference](./markdown2html5-base.pdf)
+
+You can evaluate the results by creating a simple Python application to convert 
+a Markdown file to an HTML5 file:
+
+```
+#!/usr/bin/env python3
+import sys
+from markdown2html5_base import MarkdownToHTML
+
+def main():
+    if len(sys.argv) < 2:
+        print(f"Usage: {sys.argv[0]} <input.md> [output.html]", file=sys.stderr)
+        sys.exit(1)
+
+    with open(sys.argv[1], encoding="utf-8") as f:
+        md = f.read()
+
+    html = MarkdownToHTML().convert(md)
+
+    if len(sys.argv) >= 3:
+        with open(sys.argv[2], "w", encoding="utf-8") as f:
+            f.write(html)
+        print(f"Written to {sys.argv[2]}")
+    else:
+        print(html)
+
+if __name__ == "__main__":
+    main()
+```
 
 ## Acknowledgements
 
