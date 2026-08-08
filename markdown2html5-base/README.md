@@ -1,6 +1,6 @@
 # markdown2html5-base
 
-`markdown2html5-base` is a minimalist, fast, and extensible Python 3 library designed to convert Markdown text into valid, semantic HTML5 markup. It supports John Gruber’s original basic syntax, popular extended features (GFM), smart typography replacements, and a custom `ruby` rule for Asian phonetic guides.
+`markdown2html5-base` is a minimalist, fast, and extensible Python 3 library designed to convert Markdown text into valid, semantic HTML5 markup. It supports John Gruber’s original basic syntax, popular extended features (GFM), smart typography replacements, and a custom `ruby` rule for Asian phonetic guides (e.g., Japanese Furigana).
 
 ## 🚀 Installation
 
@@ -71,7 +71,7 @@ print(html_output)
   ```text
   <div>Some HTML code</div>
   ```
-* **Tables:** Cell alignment is configured via the delimiter row. A footer section can be added by separating it with `=` signs:
+* **Tables:** Cell alignment is configured via the delimiter row. A footer section can be added by separating it with `=` signs; footer rows render in italics:
 
   ```text
   | Left | Center | Right |
@@ -80,6 +80,8 @@ print(html_output)
   |=====|========|=======|
   | Foot |  Foot  | Foot  |
   ```
+
+  This produces a `<tfoot>` section whose cells are wrapped in `<em>` tags.
 * **Task Lists:** `- [ ] Pending item` and `- [x] Completed item`
 * **Definition Lists:**
   
@@ -91,7 +93,7 @@ print(html_output)
 * **Footnotes:** Insert markers `[^1]` anywhere and define their values globally via `[^1]: Footnote body text.`
 * **Text Markers:** Strikethrough `~~text~~`, text highlight `==marker==`, underline `^^text^^`, subscript `H~2~O`, and superscript `X^2^`
 * **Hidden Comments:** `[comment text]: #` renders as an invisible HTML comment `<!--comment text-->`
-* **Emoji shortcodes:** `:joy:` 😂, `:heart:` ❤️, `:fire:` 🔥, and more.
+* **Emoji shortcodes:** `:joy:` → `&#128514;` (😂), `:heart:` → `&#10084;&#65039;` (❤️), `:fire:` → `&#128293;` (🔥), and more — see the full table in [Emoji Shortcodes](#6-emoji-shortcodes).
 
 ### 3. Ruby Rule (Japanese Furigana)
 
@@ -102,17 +104,56 @@ A custom syntax for phonetic hints above kanji/characters:
 
 ### 4. Automatic Replacements & Smart Typography
 
-The converter formats raw text on the fly for professional typesetting:
+The converter formats raw text on the fly for professional typesetting, emitting HTML entities:
 
-* **Quotes:** Straight quotes (`"` and `'`) change to curly open/close marks (`“ ”`, `‘ ’`).
-* **Dashes:** Two hyphens `--` become an en-dash (–), and three hyphens `---` become an em-dash (—).
-* **Punctuation:** Three dots `...` convert into a proper ellipsis character (…).
-* **Math & Signs:** `1/2` → `½`, `3/4` → `¾`, `!=` → `≠`, `+/-` → `±`, `<=`, `>=`.
-* **Guillemets and Legal Marks:** `<<` and `>>` format into guillemets (`«`, `»`), while text tokens like `(c)` or `(tm)` turn into `©` and `™`.
+| Input   | Output             |
+| ------- | ------------------ |
+| `(c)`   | `&#169;` (©)       |
+| `(tm)`  | `&#8482;` (™)      |
+| `(r)`   | `&#174;` (®)       |
+| `...`   | `&#8230;` (…)      |
+| `---`   | `&#8212;` (—)      |
+| `--`    | `&#8211;` (–)      |
+| `+/-`   | `&#177;` (±)       |
+| `!=`    | `&#8800;` (≠)      |
+| `<=`    | `&#8804;` (≤)      |
+| `>=`    | `&#8805;` (≥)      |
+| `1/2`   | `&#189;` (½)       |
+| `1/4`   | `&#188;` (¼)       |
+| `3/4`   | `&#190;` (¾)       |
+| `<<`    | `&#171;` («)       |
+| `>>`    | `&#187;` (»)       |
+| `"text"`| `&#8220;text&#8221;` |
+| `'text'`| `&#8216;text&#8217;` |
+| `'`     | `&#8217;` (’)      |
 
 ### 5. Backslash Escaping
 
 If you need to render a Markdown symbol literally, escape it by prefixing with a backslash: `\*` outputs a literal asterisk `*` instead of initiating italic formatting.
+
+### 6. Emoji Shortcodes
+
+| Shortcode     | Output                 |
+| ------------- | ---------------------- |
+| `:joy:`       | `&#128514;` (😂)       |
+| `:smile:`     | `&#128516;` (😄)       |
+| `:heart:`     | `&#10084;&#65039;` (❤️)|
+| `:thumbsup:`  | `&#128077;` (👍)       |
+| `:thumbsdown:`| `&#128078;` (👎)       |
+| `:wink:`      | `&#128521;` (😉)       |
+| `:tada:`      | `&#127881;` (🎉)       |
+| `:rocket:`    | `&#128640;` (🚀)       |
+| `:fire:`      | `&#128293;` (🔥)       |
+| `:star:`      | `&#11088;` (⭐)        |
+| `:cry:`       | `&#128546;` (😢)       |
+| `:thinking:`  | `&#129300;` (🤔)       |
+| `:100:`       | `&#128175;` (💯)       |
+| `:sparkles:`  | `&#10024;` (✨)        |
+| `:eyes:`      | `&#128064;` (👀)       |
+| `:bulb:`      | `&#128161;` (💡)       |
+| `:warning:`   | `&#9888;&#65039;` (⚠️) |
+| `:ok:`        | `&#128076;` (👌)       |
+| `:check_mark:`| `&#10004;&#65039;` (✔️)|
 
 ---
 
