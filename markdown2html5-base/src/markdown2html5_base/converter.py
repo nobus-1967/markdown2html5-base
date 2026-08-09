@@ -77,30 +77,115 @@ class MarkdownToHTML:
     ]
 
     TYPOGRAPHY_RULES: ClassVar[list[tuple[str, str]]] = [
-        (r"\([cC]\)", "&#169;"),
-        (r"\([tT][mM]\)", "&#8482;"),
-        (r"\([rR]\)", "&#174;"),
-        (r"\.\.\.", "&#8230;"),
-        (r"---", "&#8212;"),
-        (r"--", "&#8211;"),
-        (r"\+/-", "&#177;"),
-        (r"!=", "&#8800;"),
-        (r"<=", "&#8804;"),
-        (r">=", "&#8805;"),
-        (r"1/2", "&#189;"),
-        (r"1/4", "&#188;"),
-        (r"3/4", "&#190;"),
-        (r"<<", "&#171;"),
-        (r">>", "&#187;"),
-        (r'"([^"\n]+)"', r"&#8220;\1&#8221;"),
-        (r"'([^'\n]+)'", r"&#8216;\1&#8217;"),
-        (r"'", "&#8217;"),
+        (r"\([cC]\)", "&copy;"),
+        (r"\([tT][mM]\)", "&trade;"),
+        (r"\([rR]\)", "&reg;"),
+        (r"\+/-", "&plusmn;"),
+        (r"!=", "&ne;"),
+        (r"<=>", "&hArr;"),
+        (r"<=", "&le;"),
+        (r">=", "&ge;"),
+        (r"->", "&rarr;"),
+        (r"<-", "&larr;"),
+        (r":uparrow:", "&uarr;"),
+        (r":dnarrow:", "&darr;"),
+        (r"=>", "&rArr;"),
+        (r"1/2", "&frac12;"),
+        (r"1/3", "&frac13;"),
+        (r"2/3", "&frac23;"),
+        (r"1/4", "&frac14;"),
+        (r"3/4", "&frac34;"),
+        (r"<<", "&laquo;"),
+        (r">>", "&raquo;"),
+        (r'"([^"\n]+)"', r"&ldquo;\1&rdquo;"),
+        (r"'([^'\n]+)'", r"&lsquo;\1&rsquo;"),
+        (r"'", "&apos;"),
+        (r"---", "&mdash;"),
+        (r"--", "&ndash;"),
+        (r"\.\.\.", "&hellip;"),
     ]
 
     FOOTNOTE_REF_RE = re.compile(r"\[\^([a-zA-Z0-9]+)\]")
     FOOTNOTE_REF_HTML = (
         r'<sup id="fnref:\1"><a href="#fn:\1" class="footnote-ref">\1</a></sup>'
     )
+
+    BLOCK_LANG_RE = re.compile(r"^\s*\{:([a-zA-Z0-9-]+)\}\s+(.*)$")
+    INLINE_LANG_RE = re.compile(r"\{:([a-zA-Z0-9-]+)\}(.*?)\{:}")
+
+    FRONT_MATTER_KEYS = (
+        "lang",
+        "title",
+        "author",
+        "description",
+        "keywords",
+        "published",
+    )
+
+    def _parse_front_matter(self, text: str) -> tuple[str, dict[str, str]]:
+        if not text.startswith("---\n"):
+            return text, {}
+        lines = text.split("\n")
+        end = None
+        for i in range(1, len(lines)):
+            if lines[i].strip() == "---":
+                end = i
+                break
+        if end is None:
+            return text, {}
+
+        front_matter: dict[str, str] = {}
+        for line in lines[1:end]:
+            line = line.strip()
+            if not line or line.startswith("#") or ":" not in line:
+                continue
+            key, _, value = line.partition(":")
+            key, value = key.strip(), value.strip()
+            if key in self.FRONT_MATTER_KEYS:
+                front_matter[key] = value
+
+        body = "\n".join(lines[end + 1 :])
+        return body, front_matter
+
+    def _build_document(self, body: str, front_matter: dict[str, str]) -> str:
+        lang = front_matter.get("lang", "")
+        lang_attr = f' lang="{lang}"' if lang else ""
+
+        head = ['    <meta charset="utf-8" />']
+        if "author" in front_matter:
+            head.append(
+                f'    <meta name="author" content="{front_matter["author"]}" />'
+            )
+        if "description" in front_matter:
+            head.append(
+                f'    <meta name="description" content="{front_matter["description"]}" />'
+            )
+        if "keywords" in front_matter:
+            head.append(
+                f'    <meta name="keywords" content="{front_matter["keywords"]}" />'
+            )
+        if "title" in front_matter:
+            head.append(f"    <title>{front_matter['title']}</title>")
+        if "published" in front_matter:
+            head.append(
+                f'    <meta name="published" content="{front_matter["published"]}" />'
+            )
+
+        lines = ["<!doctype html>", f"<html{lang_attr}>", "  <head>"]
+        lines.extend(head)
+        lines.extend(["  </head>", "  <body>"])
+        if body:
+            lines.append(body)
+        lines.extend(["  </body>", "</html>"])
+        return "\n".join(lines)
+
+    @staticmethod
+    def _lang_attr(lang: str) -> str:
+        return f' lang="{lang}"' if lang else ""
+
+    def _render_paragraph(self, buffer_lines: list[str], lang: str = "") -> str:
+        lang_attr = self._lang_attr(lang)
+        return f"<p{lang_attr}>{self._process_paragraph_breaks(buffer_lines)}</p>"
 
     def _apply_footnote_refs(self, text: str) -> str:
         return self.FOOTNOTE_REF_RE.sub(self.FOOTNOTE_REF_HTML, text)
@@ -120,6 +205,8 @@ class MarkdownToHTML:
         if not text.strip():
             return ""
 
+        text, front_matter = self._parse_front_matter(text)
+
         text = self._replace_escapes(text)
         text, footnotes = self._extract_footnotes(text)
 
@@ -134,7 +221,24 @@ class MarkdownToHTML:
         quote_buffer = []
         table_rows = []
 
+        paragraph_lang = ""
+        quote_lang = ""
+        table_lang = ""
+
         list_just_closed = False
+
+        def flush_pending() -> None:
+            nonlocal paragraph_lang, quote_lang, table_lang
+            self._flush_all_buffers(
+                html_lines,
+                paragraph_buffer,
+                quote_buffer,
+                table_rows,
+                p_lang=paragraph_lang,
+                q_lang=quote_lang,
+                t_lang=table_lang,
+            )
+            paragraph_lang = quote_lang = table_lang = ""
 
         for line in lines:
             stripped = line.strip()
@@ -152,9 +256,7 @@ class MarkdownToHTML:
                     code_buffer = []
                     in_code_block = False
                 else:
-                    self._flush_all_buffers(
-                        html_lines, paragraph_buffer, quote_buffer, table_rows
-                    )
+                    flush_pending()
                     in_code_block = True
                 continue
 
@@ -162,12 +264,18 @@ class MarkdownToHTML:
                 code_buffer.append(line)
                 continue
 
+            # Block-level language marker: {:lang} content
+            block_lang = ""
+            lang_match = self.BLOCK_LANG_RE.match(line)
+            if lang_match:
+                block_lang = lang_match.group(1)
+                line = lang_match.group(2)
+                stripped = line.strip()
+
             # Hidden comment: [text]: #
             comment_match = re.match(r"^\[(.+)\]:\s+#\s*$", stripped)
             if comment_match:
-                self._flush_all_buffers(
-                    html_lines, paragraph_buffer, quote_buffer, table_rows
-                )
+                flush_pending()
                 html_lines.append(f"<!--{comment_match.group(1)}-->")
                 continue
 
@@ -192,20 +300,23 @@ class MarkdownToHTML:
                 or not stripped
             ) and paragraph_buffer:
                 html_lines.append(
-                    f"<p>{self._process_paragraph_breaks(paragraph_buffer)}</p>"
+                    self._render_paragraph(paragraph_buffer, paragraph_lang)
                 )
                 paragraph_buffer = []
+                paragraph_lang = ""
 
             # Close open containers on sudden formatting breaks
             if not is_quote_item and in_blockquote:
-                self._close_quote(html_lines, quote_buffer)
-                quote_buffer, in_blockquote = [], False
+                self._close_quote(html_lines, quote_buffer, quote_lang)
+                quote_buffer, in_blockquote, quote_lang = [], False, ""
             if not is_table_row and in_table:
-                html_lines.append(self._compile_table(table_rows))
-                table_rows, in_table = [], False
+                html_lines.append(self._compile_table(table_rows, table_lang))
+                table_rows, in_table, table_lang = [], False, ""
 
             # Tables
             if is_table_row:
+                if not in_table:
+                    table_lang = block_lang
                 in_table = True
                 table_rows.append(stripped)
                 continue
@@ -214,12 +325,19 @@ class MarkdownToHTML:
             if is_def_desc:
                 if not in_def_list:
                     in_def_list = True
-                    html_lines.append("<dl>")
                     term = ""
-                    if html_lines and html_lines[-1].startswith("<p>"):
-                        term = html_lines.pop().replace("<p>", "").replace("</p>", "")
+                    lang_attr = ""
+                    if html_lines and html_lines[-1].startswith("<p"):
+                        term_line = html_lines.pop()
+                        tag_match = re.match(r"^<p( lang=\"[^\"]*\")?>", term_line)
+                        if tag_match and tag_match.group(1):
+                            lang_attr = tag_match.group(1)
+                        term = term_line[tag_match.end() :].replace("</p>", "")
                     elif html_lines and not html_lines[-1].startswith("<"):
                         term = html_lines.pop()
+                    if block_lang:
+                        lang_attr = self._lang_attr(block_lang)
+                    html_lines.append(f"<dl{lang_attr}>")
                     if term:
                         html_lines.append(
                             f"  <dt>{self._apply_inline_rules(term)}</dt>"
@@ -242,7 +360,8 @@ class MarkdownToHTML:
                     if in_ol:
                         list_just_closed = True
                     in_ol = False
-                    html_lines.append("<ul>")
+                    ul_lang = self._lang_attr(block_lang)
+                    html_lines.append(f"<ul{ul_lang}>")
                     in_ul = True
 
                 content = stripped[2:]
@@ -270,7 +389,8 @@ class MarkdownToHTML:
                     if in_ul:
                         list_just_closed = True
                     in_ul = False
-                    html_lines.append("<ol>")
+                    ol_lang = self._lang_attr(block_lang)
+                    html_lines.append(f"<ol{ol_lang}>")
                     in_ol = True
                 content = re.sub(r"^\d+\.\s+", "", stripped)
                 content = self._apply_inline_rules(content)
@@ -280,12 +400,13 @@ class MarkdownToHTML:
 
             if in_ul or in_ol:
                 self._close_containers(html_lines, ul=in_ul, ol=in_ol)
-                if in_ul or in_ol:
-                    list_just_closed = True
+                list_just_closed = True
                 in_ul, in_ol = False, False
 
             # Blockquotes
             if is_quote_item:
+                if not in_blockquote:
+                    quote_lang = block_lang
                 in_blockquote = True
                 content = (
                     line.lstrip()[2:] if stripped.startswith("> ") else stripped[1:]
@@ -313,8 +434,9 @@ class MarkdownToHTML:
                     id_attr = f' id="{id_match.group(1)}"'
                     title = title[: id_match.start()]
 
+                lang_attr = self._lang_attr(block_lang)
                 title = self._apply_inline_rules(title)
-                html_lines.append(f"<h{level}{id_attr}>{title}</h{level}>")
+                html_lines.append(f"<h{level}{id_attr}{lang_attr}>{title}</h{level}>")
                 continue
 
             if is_hr:
@@ -322,10 +444,12 @@ class MarkdownToHTML:
                 continue
 
             # Paragraphs (footnote refs are resolved after inline rules)
+            if not paragraph_buffer and block_lang:
+                paragraph_lang = block_lang
             paragraph_buffer.append(line)
 
         # Flush remaining buffers at end of document
-        self._flush_all_buffers(html_lines, paragraph_buffer, quote_buffer, table_rows)
+        flush_pending()
         self._close_containers(html_lines, ul=in_ul, ol=in_ol)
         if in_def_list:
             html_lines.append("</dl>")
@@ -334,7 +458,10 @@ class MarkdownToHTML:
         html_lines.extend(self._render_footnotes(footnotes))
 
         final_html = "\n".join(html_lines)
-        return self._restore_escapes(final_html)
+        final_html = self._restore_escapes(final_html)
+        if front_matter:
+            return self._build_document(final_html, front_matter)
+        return final_html
 
     def _render_footnotes(self, footnotes: dict[str, str]) -> list[str]:
         if not footnotes:
@@ -356,8 +483,11 @@ class MarkdownToHTML:
         if ol:
             lines.append("</ol>")
 
-    def _close_quote(self, html_lines: list[str], quote_buffer: list[str]) -> None:
-        html_lines.append("<blockquote>")
+    def _close_quote(
+        self, html_lines: list[str], quote_buffer: list[str], lang: str = ""
+    ) -> None:
+        lang_attr = self._lang_attr(lang)
+        html_lines.append(f"<blockquote{lang_attr}>")
         subs, curr = [], []
         for item in quote_buffer:
             if item.strip() == "":
@@ -371,7 +501,23 @@ class MarkdownToHTML:
         html_lines.extend(subs)
         html_lines.append("</blockquote>")
 
-    def _compile_table(self, rows: list[str]) -> str:
+    def _table_row(
+        self,
+        cells: list[str],
+        alignments: list[str],
+        tag: str = "td",
+        em: bool = False,
+    ) -> str:
+        cell_lines = []
+        for i, cell in enumerate(cells):
+            align = alignments[i] if i < len(alignments) else ""
+            content = self._apply_inline_rules(cell)
+            if em:
+                content = f"<em>{content}</em>"
+            cell_lines.append(f"      <{tag}{align}>{content}</{tag}>")
+        return "\n".join(["    <tr>", *cell_lines, "    </tr>"])
+
+    def _compile_table(self, rows: list[str], lang: str = "") -> str:
         if len(rows) < 2:
             return "\n".join(rows)
 
@@ -395,38 +541,29 @@ class MarkdownToHTML:
             else:
                 alignments.append("")
 
-        html = ["<table>", "  <thead>", "    <tr>"]
+        lang_attr = self._lang_attr(lang)
         headers = [c.strip() for c in rows[0].split("|")[1:-1]]
-        for i, h in enumerate(headers):
-            align = alignments[i] if i < len(alignments) else ""
-            html.append(f"      <th{align}>{self._apply_inline_rules(h)}</th>")
-        html.extend(["    </tr>", "  </thead>"])
+        html = [
+            f"<table{lang_attr}>",
+            "  <thead>",
+            self._table_row(headers, alignments, tag="th"),
+            "  </thead>",
+        ]
 
         body_rows = rows[2:footer_idx] if footer_idx else rows[2:]
-        footer_rows = rows[footer_idx + 1 :] if footer_idx else []
-
         if body_rows:
             html.append("  <tbody>")
             for r in body_rows:
                 cols = [c.strip() for c in r.split("|")[1:-1]]
-                html.append("    <tr>")
-                for i, c in enumerate(cols):
-                    align = alignments[i] if i < len(alignments) else ""
-                    html.append(f"      <td{align}>{self._apply_inline_rules(c)}</td>")
-                html.append("    </tr>")
+                html.append(self._table_row(cols, alignments))
             html.append("  </tbody>")
 
+        footer_rows = rows[footer_idx + 1 :] if footer_idx else []
         if footer_rows:
             html.append("  <tfoot>")
             for r in footer_rows:
                 cols = [c.strip() for c in r.split("|")[1:-1]]
-                html.append("    <tr>")
-                for i, c in enumerate(cols):
-                    align = alignments[i] if i < len(alignments) else ""
-                    html.append(
-                        f"      <td{align}><em>{self._apply_inline_rules(c)}</em></td>"
-                    )
-                html.append("    </tr>")
+                html.append(self._table_row(cols, alignments, em=True))
             html.append("  </tfoot>")
 
         html.append("</table>")
@@ -466,21 +603,27 @@ class MarkdownToHTML:
         p_buf: list[str],
         q_buf: list[str],
         t_rows: list[str],
+        p_lang: str = "",
+        q_lang: str = "",
+        t_lang: str = "",
     ) -> None:
         if p_buf:
-            html.append(f"<p>{self._process_paragraph_breaks(p_buf)}</p>")
+            html.append(self._render_paragraph(p_buf, p_lang))
+            p_buf.clear()
         if q_buf:
-            self._close_quote(html, q_buf)
+            self._close_quote(html, q_buf, q_lang)
+            q_buf.clear()
         if t_rows:
-            html.append(self._compile_table(t_rows))
+            html.append(self._compile_table(t_rows, t_lang))
+            t_rows.clear()
 
     def _apply_inline_rules(self, text: str) -> str:
         # Emoji shortcodes
         for code, emoji in self.EMOJIS.items():
             text = text.replace(f":{code}:", emoji)
-        # Ruby annotation
+        # Ruby annotation (base cannot contain : } { | so {:lang} stays intact)
         text = re.sub(
-            r"\{([^|]+)\|([^}]+)\}",
+            r"\{([^{}:|]+)\|([^}]+)\}",
             r"<ruby>\1<rp>(</rp><rt>\2</rt><rp>)</rp></ruby>",
             text,
         )
@@ -490,4 +633,6 @@ class MarkdownToHTML:
         # Inline text styling
         for pattern, replacement in self.INLINE_RULES:
             text = re.sub(pattern, replacement, text)
+        # Inline language spans: {:lang}...{:} -> <span lang="lang">...</span>
+        text = self.INLINE_LANG_RE.sub(r'<span lang="\1">\2</span>', text)
         return text

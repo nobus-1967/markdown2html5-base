@@ -79,11 +79,74 @@ def test_ruby_rule(converter):
 
 
 def test_typography_and_math(converter):
-    assert converter.convert("(c) 2026...") == "<p>&#169; 2026&#8230;</p>"
-    assert converter.convert("1/2 != 3/4") == "<p>&#189; &#8800; &#190;</p>"
+    assert converter.convert("(c) 2026...") == "<p>&copy; 2026&hellip;</p>"
+    assert converter.convert("1/2 != 3/4") == "<p>&frac12; &ne; &frac34;</p>"
     assert converter.convert('"Hello" and <<World>>') == (
-        "<p>&#8220;Hello&#8221; and &#171;World&#187;</p>"
+        "<p>&ldquo;Hello&rdquo; and &laquo;World&raquo;</p>"
     )
+
+
+def test_typography_arrows(converter):
+    assert converter.convert("a -> b") == "<p>a &rarr; b</p>"
+    assert converter.convert("a <- b") == "<p>a &larr; b</p>"
+    assert converter.convert("a <=> b") == "<p>a &hArr; b</p>"
+    assert converter.convert("a => b") == "<p>a &rArr; b</p>"
+    assert converter.convert("up :uparrow: down :dnarrow:") == (
+        "<p>up &uarr; down &darr;</p>"
+    )
+
+
+def test_front_matter_full_document(converter):
+    md_text = (
+        "---\n"
+        "lang: en\n"
+        "title: My Document\n"
+        "author: Jane Doe\n"
+        "description: A test page\n"
+        "keywords: one, two, three\n"
+        "published: 2026-08-09\n"
+        "---\n"
+        "# Hello\n"
+        "Body text."
+    )
+    expected = (
+        "<!doctype html>\n"
+        '<html lang="en">\n'
+        "  <head>\n"
+        '    <meta charset="utf-8" />\n'
+        '    <meta name="author" content="Jane Doe" />\n'
+        '    <meta name="description" content="A test page" />\n'
+        '    <meta name="keywords" content="one, two, three" />\n'
+        "    <title>My Document</title>\n"
+        '    <meta name="published" content="2026-08-09" />\n'
+        "  </head>\n"
+        "  <body>\n"
+        "<h1>Hello</h1>\n"
+        "<p>Body text.</p>\n"
+        "  </body>\n"
+        "</html>"
+    )
+    assert converter.convert(md_text) == expected
+
+
+def test_front_matter_only_lang(converter):
+    md_text = "---\nlang: ru\n---\n# Привет"
+    expected = (
+        "<!doctype html>\n"
+        '<html lang="ru">\n'
+        "  <head>\n"
+        '    <meta charset="utf-8" />\n'
+        "  </head>\n"
+        "  <body>\n"
+        "<h1>Привет</h1>\n"
+        "  </body>\n"
+        "</html>"
+    )
+    assert converter.convert(md_text) == expected
+
+
+def test_no_front_matter_returns_fragment(converter):
+    assert converter.convert("# Hello") == "<h1>Hello</h1>"
 
 
 def test_escape_characters(converter):
@@ -107,6 +170,12 @@ def test_fenced_code_blocks(converter):
     assert converter.convert(md_code) == expected
 
 
+def test_paragraph_before_fenced_code_not_duplicated(converter):
+    assert converter.convert("Line\n```\ncode\n```") == (
+        "<p>Line</p>\n<pre><code>code</code></pre>"
+    )
+
+
 def test_tables(converter):
     md_table = "| H1 | H2 |\n| :--- | ---: |\n| A | B |"
     expected = '<table>\n  <thead>\n    <tr>\n      <th style="text-align:left;">H1</th>\n      <th style="text-align:right;">H2</th>\n    </tr>\n  </thead>\n  <tbody>\n    <tr>\n      <td style="text-align:left;">A</td>\n      <td style="text-align:right;">B</td>\n    </tr>\n  </tbody>\n</table>'
@@ -124,3 +193,47 @@ def test_tables_with_italic_footer(converter):
         '      <td style="text-align:right;"><em>$3.00</em></td>\n    </tr>\n  </tfoot>\n</table>'
     )
     assert converter.convert(md_table) == expected
+
+
+def test_block_language_markers(converter):
+    assert converter.convert("{:de} # Heading 1") == '<h1 lang="de">Heading 1</h1>'
+    assert (
+        converter.convert("{:fr} Text français.") == '<p lang="fr">Text français.</p>'
+    )
+    assert converter.convert("{:de} - Item eins") == (
+        '<ul lang="de">\n  <li>Item eins</li>\n</ul>'
+    )
+    assert converter.convert("{:de} 1. Erstens") == (
+        '<ol lang="de">\n  <li>Erstens</li>\n</ol>'
+    )
+    assert converter.convert("{:de} > Zitat text") == (
+        '<blockquote lang="de">\n  <p>Zitat text</p>\n</blockquote>'
+    )
+    assert converter.convert("{:de} Begriff\n: Erklärung") == (
+        '<dl lang="de">\n  <dt>Begriff</dt>\n  <dd>Erklärung</dd>\n</dl>'
+    )
+
+
+def test_block_language_marker_table(converter):
+    md_table = "{:de} | Kopf | Kopf |\n| --- | --- |\n| Zelle | Zelle |"
+    expected = (
+        '<table lang="de">\n  <thead>\n    <tr>\n      <th>Kopf</th>\n'
+        "      <th>Kopf</th>\n    </tr>\n  </thead>\n  <tbody>\n    <tr>\n"
+        "      <td>Zelle</td>\n      <td>Zelle</td>\n    </tr>\n  </tbody>\n</table>"
+    )
+    assert converter.convert(md_table) == expected
+
+
+def test_inline_language_spans(converter):
+    assert converter.convert("Text {:fr}\"L'État c'est moi\"{:} hier.") == (
+        '<p>Text <span lang="fr">&ldquo;L&lsquo;État c&rsquo;est moi&rdquo;</span> hier.</p>'
+    )
+    assert converter.convert("{:ru} Привет {:en}world{:}!") == (
+        '<p lang="ru">Привет <span lang="en">world</span>!</p>'
+    )
+    assert converter.convert("{:de} # Titel {:en}sub{:}") == (
+        '<h1 lang="de">Titel <span lang="en">sub</span></h1>'
+    )
+    assert converter.convert("{:ja}{私|わたし}は{:}です。") == (
+        '<p><span lang="ja"><ruby>私<rp>(</rp><rt>わたし</rt><rp>)</rp></ruby>は</span>です。</p>'
+    )
