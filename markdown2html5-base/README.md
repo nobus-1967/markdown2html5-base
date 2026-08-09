@@ -1,6 +1,6 @@
 # markdown2html5-base
 
-`markdown2html5-base` is a minimalist, fast, and extensible Python 3 librarydesigned to convert Markdown text into valid, semantic HTML5 markup. It supports John Gruber’s original basic syntax, popular extended features (GFM), smart typography replacements, and a custom `ruby` rule for Asian phonetic guides (e.g., Japanese Furigana).
+`markdown2html5-base` is a minimalist, fast, and extensible Python 3 library designed to convert Markdown text into valid, semantic HTML5 markup. It supports John Gruber’s original basic syntax, popular extended features (GFM), smart typography replacements, and a custom `ruby` rule for Asian phonetic guides (e.g., Japanese Furigana).
 
 ## 🚀 Installation
 
