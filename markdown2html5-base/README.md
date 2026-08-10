@@ -12,24 +12,24 @@ pip install -e .
 
 ## 💻 CLI Usage (Terminal)
 
-Once installed, the global command-line tool `markdown2html5` becomes available on your system.
+Once installed, the global command-line tool `markdown2html5-base` becomes available on your system.
 
 ### Basic Commands
 
 * **Show help message:**
   
   ```bash
-  markdown2html5 --help
+  markdown2html5-base --help
   ```
 * **Convert a file and save the output:**
   
   ```bash
-  markdown2html5 input.md -o output.html
+  markdown2html5-base input.md -o output.html
   ```
 * **Use inside Unix pipelines:**
   
   ```bash
-  echo "# Hello" | markdown2html5
+  echo "# Hello" | markdown2html5-base
   ```
 
 ---
@@ -61,13 +61,13 @@ print(html_output)
 * **Blockquotes (with paragraph support):** `> Quote text`
 * **Lists:** Unordered (`-` or `*`) and Ordered (`1.`, `2.`)
 * **Horizontal Rules:** `---`, `***`, `___` (rendered as `<hr>`)
+* **Inline Code:** `` `code` `` — HTML inside inline code is escaped automatically, so `` `<title>` `` renders as `&lt;title&gt;` and never as a real tag. Inline code gets a light gray `background-color:#f0f0f0;` background via an inline `style` attribute on `<code>`.
 * **Links and Images:** `[Text](url)` and `![alt](url)`
-* **Inline Code:** `` `code` ``
 
 ### 2. Extended Syntax
 
-* **Fenced Code Blocks:** HTML content inside code blocks is escaped automatically:
-  
+* **Fenced Code Blocks:** HTML content inside code blocks is escaped automatically. Fenced blocks render as `<pre><code>` with a bordered box style (`border`, rounded corners, padding, and a light background) via an inline `style` attribute — distinct from the plain background used for inline code:
+
   ```text
   <div>Some HTML code</div>
   ```

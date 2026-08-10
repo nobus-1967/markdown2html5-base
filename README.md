@@ -1,9 +1,6 @@
 # markdown2html5-base
 
-A minimal Python 3 library that converts Markdown text into clean, semantic
-HTML5 markup. Supports standard Markdown, GFM extensions, YAML front matter,
-smart typography, language markers, ruby annotations for phonetic guides, hidden
-comments, and table footers.
+A minimalist, fast, and extensible Python 3 library that converts Markdown text into clean, semantic HTML5 markup. Supports standard Markdown, GFM extensions, YAML front matter, smart typography, language markers, ruby annotations for phonetic guides, hidden comments, and table footers.
 
 ## Examples:
 
@@ -163,10 +160,8 @@ See package's [README](./markdown2html5-base/README.md) for details.
 
 ## YAML front matter
 
-YAML front matter is an optional block at the very top of a Markdown file,
-delimited by `---` lines. When present, the converter emits a complete HTML5
-document (with a `<!doctype html>` declaration, `<head>` metadata, and `<body>`)
-instead of a bare HTML fragment.
+YAML front matter is an optional block at the very top of a Markdown file, delimited by `---` lines. When present, the converter emits a complete HTML5
+document (with a `<!doctype html>` declaration, `<head>` metadata, and `<body>`) instead of a bare HTML fragment.
 
 Example:
 
@@ -206,13 +201,11 @@ Resulting document:
 </html>
 ```
 
-Any other keys are ignored, and if the file has no front matter at all, the
-output remains a bare fragment.
+Any other keys are ignored, and if the file has no front matter at all, the output remains a bare fragment.
 
 ## How it works
 
-All markup elements used in this library are listed in
-[Full Markdown Functionality Reference](./markdown2html5-base.pdf)
+All markup elements used in this library are listed in [Full Markdown Functionality Reference](./markdown2html5-base.pdf)
 
 You can evaluate the results by creating a simple Python application to convert a Markdown file to an HTML5 file:
 
@@ -245,5 +238,4 @@ You can also use [markdown2pdf-base](https://github.com/nobus-1967/markdown2pdf-
 
 ## Acknowledgements
 
-Thanks to  Matt Cone for his excellent
-[Markdown Guide](https://www.markdownguide.org/)!
+Thanks to  Matt Cone for his excellent [Markdown Guide](https://www.markdownguide.org/)!

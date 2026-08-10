@@ -59,6 +59,12 @@ class MarkdownToHTML:
         "|": "&#124;",
     }
 
+    CODE_STYLE: ClassVar[str] = "background-color:#f0f0f0;"
+    CODE_BLOCK_STYLE: ClassVar[str] = (
+        "display:block; border:1px solid #ccc; border-radius:4px; "
+        "background-color:#f8f8f8; padding:10px; margin:10px 0; overflow:auto;"
+    )
+
     INLINE_RULES: ClassVar[list[tuple[str, str]]] = [
         (r"\*\*\*(.*?)\*\*\*", r"<strong><em>\1</em></strong>"),
         (r"___(.*?)___", r"<strong><em>\1</em></strong>"),
@@ -71,7 +77,6 @@ class MarkdownToHTML:
         (r"\~(.*?)\~", r"<sub>\1</sub>"),
         (r"\^\^(.*?)\^\^", r"<ins>\1</ins>"),
         (r"\^(.*?)\^", r"<sup>\1</sup>"),
-        (r"`(.*?)`", r"<code>\1</code>"),
         (r"!\[(.*?)\]\((.*?)\)", r'<img src="\2" alt="\1">'),
         (r"\[(.*?)\]\((.*?)\)", r'<a href="\2">\1</a>'),
     ]
@@ -183,6 +188,14 @@ class MarkdownToHTML:
     def _lang_attr(lang: str) -> str:
         return f' lang="{lang}"' if lang else ""
 
+    @staticmethod
+    def _escape_html(text: str) -> str:
+        return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+    def _render_code_block(self, content: str) -> str:
+        escaped = self._escape_html(content)
+        return f'<pre><code style="{self.CODE_BLOCK_STYLE}">{escaped}</code></pre>'
+
     def _render_paragraph(self, buffer_lines: list[str], lang: str = "") -> str:
         lang_attr = self._lang_attr(lang)
         return f"<p{lang_attr}>{self._process_paragraph_breaks(buffer_lines)}</p>"
@@ -247,12 +260,7 @@ class MarkdownToHTML:
             if stripped.startswith("```"):
                 if in_code_block:
                     code_content = "\n".join(code_buffer)
-                    code_content = (
-                        code_content.replace("&", "&amp;")
-                        .replace("<", "&lt;")
-                        .replace(">", "&gt;")
-                    )
-                    html_lines.append(f"<pre><code>{code_content}</code></pre>")
+                    html_lines.append(self._render_code_block(code_content))
                     code_buffer = []
                     in_code_block = False
                 else:
@@ -327,14 +335,18 @@ class MarkdownToHTML:
                     in_def_list = True
                     term = ""
                     lang_attr = ""
-                    if html_lines and html_lines[-1].startswith("<p"):
-                        term_line = html_lines.pop()
-                        tag_match = re.match(r"^<p( lang=\"[^\"]*\")?>", term_line)
-                        if tag_match and tag_match.group(1):
-                            lang_attr = tag_match.group(1)
-                        term = term_line[tag_match.end() :].replace("</p>", "")
-                    elif html_lines and not html_lines[-1].startswith("<"):
-                        term = html_lines.pop()
+                    if html_lines:
+                        term_line = html_lines[-1]
+                        term_match = re.match(
+                            r'^<p( lang="[^"]*")?>([\s\S]*)</p>$', term_line
+                        )
+                        if term_match:
+                            html_lines.pop()
+                            if term_match.group(1):
+                                lang_attr = term_match.group(1)
+                            term = term_match.group(2)
+                        elif not term_line.startswith("<"):
+                            term = html_lines.pop()
                     if block_lang:
                         lang_attr = self._lang_attr(block_lang)
                     html_lines.append(f"<dl{lang_attr}>")
@@ -357,8 +369,6 @@ class MarkdownToHTML:
             if is_ul_item:
                 if not in_ul:
                     self._close_containers(html_lines, ol=in_ol)
-                    if in_ol:
-                        list_just_closed = True
                     in_ol = False
                     ul_lang = self._lang_attr(block_lang)
                     html_lines.append(f"<ul{ul_lang}>")
@@ -386,8 +396,6 @@ class MarkdownToHTML:
             if is_ol_item:
                 if not in_ol:
                     self._close_containers(html_lines, ul=in_ul)
-                    if in_ul:
-                        list_just_closed = True
                     in_ul = False
                     ol_lang = self._lang_attr(block_lang)
                     html_lines.append(f"<ol{ol_lang}>")
@@ -618,6 +626,18 @@ class MarkdownToHTML:
             t_rows.clear()
 
     def _apply_inline_rules(self, text: str) -> str:
+        # Protect inline code spans so their content stays literal (no
+        # typography, emoji, or raw HTML such as <title> that would make
+        # browsers swallow the rest of the document as RCDATA).
+        code_spans: dict[str, str] = {}
+
+        def protect_code(match: re.Match) -> str:
+            key = f"\x00CODE{len(code_spans)}\x00"
+            code_spans[key] = match.group(1)
+            return key
+
+        text = re.sub(r"`([^`\n]+)`", protect_code, text)
+
         # Emoji shortcodes
         for code, emoji in self.EMOJIS.items():
             text = text.replace(f":{code}:", emoji)
@@ -635,4 +655,11 @@ class MarkdownToHTML:
             text = re.sub(pattern, replacement, text)
         # Inline language spans: {:lang}...{:} -> <span lang="lang">...</span>
         text = self.INLINE_LANG_RE.sub(r'<span lang="\1">\2</span>', text)
+
+        # Restore inline code spans with HTML-escaped content
+        for key, content in code_spans.items():
+            escaped = self._escape_html(content)
+            text = text.replace(
+                key, f'<code style="{self.CODE_STYLE}">{escaped}</code>'
+            )
         return text
