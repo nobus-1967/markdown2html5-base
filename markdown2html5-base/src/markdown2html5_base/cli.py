@@ -1,12 +1,20 @@
 import argparse
 import sys
 
+from markdown2html5_base import __version__
 from markdown2html5_base.converter import MarkdownToHTML
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="Convert Markdown (basic and extended syntax) into valid HTML5."
+    )
+    parser.add_argument(
+        "-v",
+        "--version",
+        action="version",
+        version=f"%(prog)s {__version__}",
+        help="Show the library version and exit",
     )
     parser.add_argument(
         "input",
