@@ -61,8 +61,8 @@ def test_inline_code_escapes_html_tags(converter):
         f"<p><code {CODE_STYLE}>&lt;h1&gt;Heading&lt;/h1&gt;</code></p>"
     )
     assert converter.convert("Use `<b>bold</b>` and `<!--x-->` here") == (
-        f"<p>Use <code {CODE_STYLE}>&lt;b&gt;bold&lt;/b&gt;</code> and "
-        f"<code {CODE_STYLE}>&lt;!--x--&gt;</code> here</p>"
+        f"<p>Use <code {CODE_STYLE}>&lt;b&gt;bold&lt;/b&gt;</code> "
+        f"and <code {CODE_STYLE}>&lt;!--x--&gt;</code> here</p>"
     )
     assert converter.convert("`[text](url)` and `**not bold**`") == (
         f"<p><code {CODE_STYLE}>[text](url)</code> and "

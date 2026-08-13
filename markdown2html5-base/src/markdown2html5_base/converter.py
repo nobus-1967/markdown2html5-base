@@ -660,6 +660,7 @@ class MarkdownToHTML:
         for key, content in code_spans.items():
             escaped = self._escape_html(content)
             text = text.replace(
-                key, f'<code style="{self.CODE_STYLE}">{escaped}</code>'
+                key,
+                f'<code style="{self.CODE_STYLE}">{escaped}</code>',
             )
         return text

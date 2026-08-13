@@ -21,6 +21,11 @@ Once installed, the global command-line tool `markdown2html5-base` becomes avail
   ```bash
   markdown2html5-base --help
   ```
+* **Show the library version:**
+  
+  ```bash
+  markdown2html5-base -v
+  ```
 * **Convert a file and save the output:**
   
   ```bash
