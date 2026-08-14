@@ -10,7 +10,7 @@ Bold: `**bold**` => `<strong>bold</strong>`
 
 Italic: `*italic*` => `<em>italic</em>`
 
-Underline: `^^underlined^^` => `<ins>underlined</ins>`
+Underline: `^^underlined^^` => `<u>underlined</u>`
 
 Strikethrough: `~~deleted~~` => `<s>deleted</s>`
 
