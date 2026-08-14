@@ -77,7 +77,6 @@ class MarkdownToHTML:
         (r"\~(.*?)\~", r"<sub>\1</sub>"),
         (r"\^\^(.*?)\^\^", r"<u>\1</u>"),
         (r"\^(.*?)\^", r"<sup>\1</sup>"),
-        (r"!\[(.*?)\]\((.*?)\)", r'<img src="\2" alt="\1">'),
         (r"\[(.*?)\]\((.*?)\)", r'<a href="\2">\1</a>'),
     ]
 
@@ -117,6 +116,7 @@ class MarkdownToHTML:
 
     BLOCK_LANG_RE = re.compile(r"^\s*\{:([a-zA-Z0-9-]+)\}\s+(.*)$")
     INLINE_LANG_RE = re.compile(r"\{:([a-zA-Z0-9-]+)\}(.*?)\{:}")
+    IMAGE_RE = re.compile(r"!\[([^\]]*)\]\((.*?)(?:\s+[\"']([^\"']*)[\"'])?\)")
 
     FRONT_MATTER_KEYS = (
         "lang",
@@ -638,6 +638,20 @@ class MarkdownToHTML:
 
         text = re.sub(r"`([^`\n]+)`", protect_code, text)
 
+        # Images with optional title (placeholder-protected so typography
+        # smart quotes don't corrupt the generated attributes)
+        img_tags: dict[str, str] = {}
+
+        def protect_image(match: re.Match) -> str:
+            key = f"\x00IMG{len(img_tags)}\x00"
+            title_attr = f' title="{match.group(3)}"' if match.group(3) else ""
+            img_tags[key] = (
+                f'<img src="{match.group(2)}" alt="{match.group(1)}"{title_attr}>'
+            )
+            return key
+
+        text = self.IMAGE_RE.sub(protect_image, text)
+
         # Emoji shortcodes
         for code, emoji in self.EMOJIS.items():
             text = text.replace(f":{code}:", emoji)
@@ -663,4 +677,7 @@ class MarkdownToHTML:
                 key,
                 f'<code style="{self.CODE_STYLE}">{escaped}</code>',
             )
+        # Restore image tags
+        for key, tag in img_tags.items():
+            text = text.replace(key, tag)
         return text

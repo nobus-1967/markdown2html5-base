@@ -67,7 +67,7 @@ print(html_output)
 * **Lists:** Unordered (`-` or `*`) and Ordered (`1.`, `2.`)
 * **Horizontal Rules:** `---`, `***`, `___` (rendered as `<hr>`)
 * **Inline Code:** `` `code` `` — HTML inside inline code is escaped automatically, so `` `<title>` `` renders as `&lt;title&gt;` and never as a real tag. Inline code gets a light gray `background-color:#f0f0f0;` background via an inline `style` attribute on `<code>`.
-* **Links and Images:** `[Text](url)` and `![alt](url)`
+* **Links and Images:** `[Text](url)` and `![alt](url)`. Images support an optional title: `![alt](url "Title")` → `<img src="url" alt="alt" title="Title">`.
 
 ### 2. Extended Syntax
 

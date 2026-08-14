@@ -70,6 +70,16 @@ def test_inline_code_escapes_html_tags(converter):
     )
 
 
+def test_images(converter):
+    assert converter.convert('![Markdown](./mark_editor.png "Title")') == (
+        '<p><img src="./mark_editor.png" alt="Markdown" title="Title"></p>'
+    )
+    assert converter.convert("![alt](src)") == ('<p><img src="src" alt="alt"></p>')
+    assert converter.convert("![alt](src 'Title')") == (
+        '<p><img src="src" alt="alt" title="Title"></p>'
+    )
+
+
 def test_multiline_paragraphs_and_breaks(converter):
     md_text = "Line one\nLine two"
     assert converter.convert(md_text) == "<p>Line one\nLine two</p>"
