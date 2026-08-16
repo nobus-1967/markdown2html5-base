@@ -156,6 +156,13 @@ Emoji shortcodes (HTML entities):
 * `:ok:` => `&#128076;` 👌
 * `:check_mark:` => `&#10004;&#65039;` ✔️
 
+The converter embeds a default `<style>` block in the `<head>` block to ensure a clean, readable layout. For instance, the language marker `{:ja}...{:}` (which renders as `<span lang="ja">...<span>`) defines the following CSS rule:
+```
+span[lang="ja"] {
+  font-family: "Noto Serif CJK JP", "Source Han Serif JP", "源ノ明朝", "Source Han Serif", "Hiragino Mincho ProN", "Hiragino Mincho Pro", "IPAexMincho", "IPAMincho", "MS PMincho", "MS Mincho", serif;
+}
+```
+
 See package's [README](./markdown2html5-base/README.md) for details.
 
 ## YAML front matter

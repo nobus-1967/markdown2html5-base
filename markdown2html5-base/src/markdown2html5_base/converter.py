@@ -59,12 +59,6 @@ class MarkdownToHTML:
         "|": "&#124;",
     }
 
-    CODE_STYLE: ClassVar[str] = "background-color:#f0f0f0;"
-    CODE_BLOCK_STYLE: ClassVar[str] = (
-        "display:block; border:1px solid #ccc; border-radius:4px; "
-        "background-color:#f8f8f8; padding:10px; margin:10px 0; overflow:auto;"
-    )
-
     INLINE_RULES: ClassVar[list[tuple[str, str]]] = [
         (r"\*\*\*(.*?)\*\*\*", r"<strong><em>\1</em></strong>"),
         (r"___(.*?)___", r"<strong><em>\1</em></strong>"),
@@ -127,6 +121,159 @@ class MarkdownToHTML:
         "published",
     )
 
+    DOCUMENT_CSS: ClassVar[str] = """body {
+  font-family: "Noto Serif", "Liberation Serif", "Times New Roman", Times, serif;
+  font-size: 18px;
+  line-height: 1.4;
+  padding: 20px;
+  color: #000000;
+}
+h1, h2, h3, h4, h5, h6 {
+  font-family: "Noto Sans", "Liberation Sans", Arial, sans-serif;
+  font-weight: bold;
+  margin-top: 1.2em;
+  margin-bottom: 0.6em;
+}
+h1 {
+  font-size: 32px;
+}
+h2 {
+  font-size: 28px;
+}
+h3 {
+  font-size: 24px;
+}
+h4 {
+  font-size: 20px;
+}
+h5, h6 {
+  font-size: 18px;
+}
+h6 {
+  font-style: italic;
+}
+li {
+  position: relative;
+  margin-left: 20px;
+  padding-left: 4px;
+}
+dt {
+  font-weight: bold;
+}
+dd {
+  font-style: italic;
+  position: relative;
+  margin-left: 0;
+  padding-left: 40px;
+}
+blockquote {
+  border-left: 4px solid #808080;
+  margin-left: 10px;
+  padding-left: 20px;
+  margin-top: 10px;
+  margin-bottom: 10px;
+}
+a:link {
+  color: #0000cd;
+}
+a:visited {
+  color: #9400d3;
+}
+a:hover, a:focus {
+  color: #000080;
+  outline: none;
+}
+a:active {
+  color: #dc143c;
+}
+mark {
+  background-color: #ffff00;
+  padding: 0px 2px;
+  border-radius: 4px;
+}
+code {
+  font-family: "Noto Sans Mono", "Liberation Mono", Courier, monospace;
+  background-color: #f5f5f5;
+  padding: 2px 4px;
+  border-radius: 4px;
+  font-size: 0.9em;
+}
+pre {
+  background-color: #f5f5f5;
+  border: 1px solid #808080;
+  border-radius: 2px;
+  margin: 0;
+  padding: 20px;
+  max-width: 100%;
+  overflow: auto;
+  scrollbar-color: #808080 transparent;
+}
+pre > code {
+  display: block;
+  line-height: 1.2;
+  background-color: transparent;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  overflow: visible;
+}
+table {
+  border-collapse: collapse;
+  margin: 20px 0;
+  width: 100%;
+}
+th, td {
+  padding: 10px 12px;
+  border: 1px solid #808080;
+}
+thead tr {
+  background-color: #808080;
+  color: #ffffff;
+}
+th {
+  font-weight: bold;
+}
+tfoot tr {
+  background-color: #f5f5f5;
+  font-style: italic;
+  border-top: 4px solid #808080;
+}
+span[lang="ja"] {
+  font-family: "Noto Serif CJK JP", "Source Han Serif JP", "源ノ明朝", "Source Han Serif", "Hiragino Mincho ProN", "Hiragino Mincho Pro", "IPAexMincho", "IPAMincho", "MS PMincho", "MS Mincho", serif;
+}
+span[lang="zh-CN"], span[lang="zh-Hans"] {
+  font-family: "Noto Serif CJK SC", "Source Han Serif SC", "思源宋体", "Source Han Serif CN", "Source Han Serif", "Songti SC", "FandolSong", "WenQuanYi Bitmap Song", "SimSun", serif;
+}
+span[lang="zh-TW"], span[lang="zh-Hant"] {
+  font-family: "Noto Serif CJK TC", "Source Han Serif TC", "思源宋體", "Source Han Serif TW", "Source Han Serif", "Apple LiSung", "LiSong Pro", "HanaMinA", "PMingLiU", "MingLiU", serif;
+}
+span[lang="zh-HK"] {
+  font-family: "Noto Serif CJK HK", "Source Han Serif HK", "思源宋體 香港", "思源宋體", "Source Han Serif", "Apple LiSung", "LiSong Pro", "HanaMinA", "MingLiU_HKSCS", "PMingLiU", "MingLiU", serif;
+}
+span[lang="ko"] {
+  font-family: "Noto Serif CJK KR", "Source Han Serif KR", "본명조", "Source Han Serif", "AppleMyungjo", "UnBatang", "은바탕", "Batang", serif;
+}
+ruby {
+  ruby-position: over;
+  ruby-align: center;
+}
+rt {
+  font-size: 0.55em;
+  letter-spacing: 0.05em;
+  line-break: strict;
+}
+rp {
+  display: none;
+}
+hr {
+  border: none;
+  height: 4px;
+  background-color: #808080;
+  margin: 20px 0px;
+}
+"""
+
     def _parse_front_matter(self, text: str) -> tuple[str, dict[str, str]]:
         if not text.startswith("---\n"):
             return text, {}
@@ -175,6 +322,7 @@ class MarkdownToHTML:
             head.append(
                 f'    <meta name="published" content="{front_matter["published"]}" />'
             )
+        head.append(f"    <style>\n{self.DOCUMENT_CSS}    </style>")
 
         lines = ["<!doctype html>", f"<html{lang_attr}>", "  <head>"]
         lines.extend(head)
@@ -194,7 +342,7 @@ class MarkdownToHTML:
 
     def _render_code_block(self, content: str) -> str:
         escaped = self._escape_html(content)
-        return f'<pre><code style="{self.CODE_BLOCK_STYLE}">{escaped}</code></pre>'
+        return f"<pre><code>{escaped}</code></pre>"
 
     def _render_paragraph(self, buffer_lines: list[str], lang: str = "") -> str:
         lang_attr = self._lang_attr(lang)
@@ -514,14 +662,11 @@ class MarkdownToHTML:
         cells: list[str],
         alignments: list[str],
         tag: str = "td",
-        em: bool = False,
     ) -> str:
         cell_lines = []
         for i, cell in enumerate(cells):
             align = alignments[i] if i < len(alignments) else ""
             content = self._apply_inline_rules(cell)
-            if em:
-                content = f"<em>{content}</em>"
             cell_lines.append(f"      <{tag}{align}>{content}</{tag}>")
         return "\n".join(["    <tr>", *cell_lines, "    </tr>"])
 
@@ -571,7 +716,7 @@ class MarkdownToHTML:
             html.append("  <tfoot>")
             for r in footer_rows:
                 cols = [c.strip() for c in r.split("|")[1:-1]]
-                html.append(self._table_row(cols, alignments, em=True))
+                html.append(self._table_row(cols, alignments))
             html.append("  </tfoot>")
 
         html.append("</table>")
@@ -673,10 +818,7 @@ class MarkdownToHTML:
         # Restore inline code spans with HTML-escaped content
         for key, content in code_spans.items():
             escaped = self._escape_html(content)
-            text = text.replace(
-                key,
-                f'<code style="{self.CODE_STYLE}">{escaped}</code>',
-            )
+            text = text.replace(key, f"<code>{escaped}</code>")
         # Restore image tags
         for key, tag in img_tags.items():
             text = text.replace(key, tag)

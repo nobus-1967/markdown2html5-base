@@ -66,12 +66,12 @@ print(html_output)
 * **Blockquotes (with paragraph support):** `> Quote text`
 * **Lists:** Unordered (`-` or `*`) and Ordered (`1.`, `2.`)
 * **Horizontal Rules:** `---`, `***`, `___` (rendered as `<hr>`)
-* **Inline Code:** `` `code` `` — HTML inside inline code is escaped automatically, so `` `<title>` `` renders as `&lt;title&gt;` and never as a real tag. Inline code gets a light gray `background-color:#f0f0f0;` background via an inline `style` attribute on `<code>`.
+* **Inline Code:** `` `code` `` — HTML inside inline code is escaped automatically, so `` `<title>` `` renders as `&lt;title&gt;` and never as a real tag.
 * **Links and Images:** `[Text](url)` and `![alt](url)`. Images support an optional title: `![alt](url "Title")` → `<img src="url" alt="alt" title="Title">`.
 
 ### 2. Extended Syntax
 
-* **Fenced Code Blocks:** HTML content inside code blocks is escaped automatically. Fenced blocks render as `<pre><code>` with a bordered box style (`border`, rounded corners, padding, and a light background) via an inline `style` attribute — distinct from the plain background used for inline code:
+* **Fenced Code Blocks:** HTML content inside code blocks is escaped automatically. Fenced blocks render as `<pre><code>`:
 
   ```text
   <div>Some HTML code</div>
@@ -86,7 +86,7 @@ print(html_output)
   | Foot |  Foot  | Foot  |
   ```
 
-  This produces a `<tfoot>` section whose cells are wrapped in `<em>` tags.
+  This produces a `<tfoot>` section (styled in italics by the default CSS).
 * **Task Lists:** `- [ ] Pending item` and `- [x] Completed item`
 * **Definition Lists:**
   
@@ -194,6 +194,7 @@ published: 2026-08-09
 * `lang` becomes the `<html lang="...">` attribute (a valid BCP 47 tag).
 * `title` becomes the `<title>` element.
 * `author`, `description`, `keywords`, and `published` become `<meta name="..." content="..." />` tags.
+* A default `<style>` block with print-friendly CSS (fonts, headings, code blocks, tables, ruby, etc.) is embedded in `<head>`.
 
 ```html
 <!doctype html>
@@ -205,6 +206,9 @@ published: 2026-08-09
     <meta name="keywords" content="python, markdown, html5" />
     <title>My Document</title>
     <meta name="published" content="2026-08-09" />
+    <style>
+      /* default print-friendly CSS */
+    </style>
   </head>
   <body>
     ...

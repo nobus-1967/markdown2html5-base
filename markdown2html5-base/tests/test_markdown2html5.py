@@ -28,45 +28,27 @@ def test_headings_and_ids(converter):
     assert converter.convert("### Title {#custom}") == '<h3 id="custom">Title</h3>'
 
 
-CODE_STYLE = 'style="background-color:#f0f0f0;"'
-CODE_BLOCK_STYLE = (
-    'style="display:block; border:1px solid #ccc; border-radius:4px; '
-    'background-color:#f8f8f8; padding:10px; margin:10px 0; overflow:auto;"'
-)
-
-
 def test_basic_inline_styles(converter):
     assert converter.convert("**bold**") == "<p><strong>bold</strong></p>"
     assert converter.convert("*italic*") == "<p><em>italic</em></p>"
     assert converter.convert("~~strikeout~~") == "<p><s>strikeout</s></p>"
-    assert converter.convert("`code`") == f"<p><code {CODE_STYLE}>code</code></p>"
+    assert converter.convert("`code`") == "<p><code>code</code></p>"
 
 
 def test_inline_code_escapes_html_tags(converter):
-    assert (
-        converter.convert("`<title>`")
-        == f"<p><code {CODE_STYLE}>&lt;title&gt;</code></p>"
-    )
-    assert converter.convert("`<textarea>`") == (
-        f"<p><code {CODE_STYLE}>&lt;textarea&gt;</code></p>"
-    )
-    assert (
-        converter.convert("`<style>`")
-        == f"<p><code {CODE_STYLE}>&lt;style&gt;</code></p>"
-    )
-    assert converter.convert("`<script>`") == (
-        f"<p><code {CODE_STYLE}>&lt;script&gt;</code></p>"
-    )
+    assert converter.convert("`<title>`") == "<p><code>&lt;title&gt;</code></p>"
+    assert converter.convert("`<textarea>`") == ("<p><code>&lt;textarea&gt;</code></p>")
+    assert converter.convert("`<style>`") == "<p><code>&lt;style&gt;</code></p>"
+    assert converter.convert("`<script>`") == ("<p><code>&lt;script&gt;</code></p>")
     assert converter.convert("`<h1>Heading</h1>`") == (
-        f"<p><code {CODE_STYLE}>&lt;h1&gt;Heading&lt;/h1&gt;</code></p>"
+        "<p><code>&lt;h1&gt;Heading&lt;/h1&gt;</code></p>"
     )
     assert converter.convert("Use `<b>bold</b>` and `<!--x-->` here") == (
-        f"<p>Use <code {CODE_STYLE}>&lt;b&gt;bold&lt;/b&gt;</code> "
-        f"and <code {CODE_STYLE}>&lt;!--x--&gt;</code> here</p>"
+        "<p>Use <code>&lt;b&gt;bold&lt;/b&gt;</code> "
+        "and <code>&lt;!--x--&gt;</code> here</p>"
     )
     assert converter.convert("`[text](url)` and `**not bold**`") == (
-        f"<p><code {CODE_STYLE}>[text](url)</code> and "
-        f"<code {CODE_STYLE}>**not bold**</code></p>"
+        "<p><code>[text](url)</code> and <code>**not bold**</code></p>"
     )
 
 
@@ -164,6 +146,7 @@ def test_front_matter_full_document(converter):
         '    <meta name="keywords" content="one, two, three" />\n'
         "    <title>My Document</title>\n"
         '    <meta name="published" content="2026-08-09" />\n'
+        f"    <style>\n{MarkdownToHTML.DOCUMENT_CSS}    </style>\n"
         "  </head>\n"
         "  <body>\n"
         "<h1>Hello</h1>\n"
@@ -181,6 +164,7 @@ def test_front_matter_only_lang(converter):
         '<html lang="ru">\n'
         "  <head>\n"
         '    <meta charset="utf-8" />\n'
+        f"    <style>\n{MarkdownToHTML.DOCUMENT_CSS}    </style>\n"
         "  </head>\n"
         "  <body>\n"
         "<h1>Привет</h1>\n"
@@ -211,15 +195,13 @@ def test_emoji_shortcodes(converter):
 
 def test_fenced_code_blocks(converter):
     md_code = "```\n<html>\n  <body>\n```"
-    expected = (
-        f"<pre><code {CODE_BLOCK_STYLE}>&lt;html&gt;\n  &lt;body&gt;</code></pre>"
-    )
+    expected = "<pre><code>&lt;html&gt;\n  &lt;body&gt;</code></pre>"
     assert converter.convert(md_code) == expected
 
 
 def test_paragraph_before_fenced_code_not_duplicated(converter):
     assert converter.convert("Line\n```\ncode\n```") == (
-        f"<p>Line</p>\n<pre><code {CODE_BLOCK_STYLE}>code</code></pre>"
+        "<p>Line</p>\n<pre><code>code</code></pre>"
     )
 
 
@@ -229,15 +211,15 @@ def test_tables(converter):
     assert converter.convert(md_table) == expected
 
 
-def test_tables_with_italic_footer(converter):
+def test_tables_with_footer(converter):
     md_table = "| Product | Price |\n| :--- | ---: |\n| Apples | $3.00 |\n|===|===|\n| Total | $3.00 |"
     expected = (
         '<table>\n  <thead>\n    <tr>\n      <th style="text-align:left;">Product</th>\n'
         '      <th style="text-align:right;">Price</th>\n    </tr>\n  </thead>\n'
         '  <tbody>\n    <tr>\n      <td style="text-align:left;">Apples</td>\n'
         '      <td style="text-align:right;">$3.00</td>\n    </tr>\n  </tbody>\n'
-        '  <tfoot>\n    <tr>\n      <td style="text-align:left;"><em>Total</em></td>\n'
-        '      <td style="text-align:right;"><em>$3.00</em></td>\n    </tr>\n  </tfoot>\n</table>'
+        '  <tfoot>\n    <tr>\n      <td style="text-align:left;">Total</td>\n'
+        '      <td style="text-align:right;">$3.00</td>\n    </tr>\n  </tfoot>\n</table>'
     )
     assert converter.convert(md_table) == expected
 
