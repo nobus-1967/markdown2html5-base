@@ -31,7 +31,7 @@ markdown2html5-base -v
 ```bash
 markdown2html5-base input.md -o output.html
 ```
-* **Embed the default print-friendly CSS in the output document:**
+* **Embed the default viewing-friendly CSS in the output document:**
 
 ```bash
 markdown2html5-base --css input.md -o output.html
@@ -44,7 +44,7 @@ echo "# Hello" | markdown2html5-base
 
 ### Embedding the Default CSS
 
-By default the CLI produces a bare HTML fragment (or a document without a `<style>` block). Pass `--css` to embed the embedded view-friendly stylesheet
+By default the CLI produces a bare HTML fragment (or a document without a `<style>` block). Pass `--css` to embed the embedded viewing-friendly stylesheet
 in `<head>`:
 
 ```bash
@@ -212,7 +212,7 @@ published: 2026-08-09
 * `lang` becomes the `<html lang="...">` attribute (a valid BCP 47 tag).
 * `title` becomes the `<title>` element.
 * `author`, `description`, `keywords`, and `published` become `<meta name="..." content="..." />` tags.
-* A default `<style>` block with print-friendly CSS (fonts, headings, code blocks, tables, ruby, etc.) is embedded in `<head>` when `--css` is passed on the CLI or `include_css=True` is used in Python (the library default).
+* A default `<style>` block with viewing-friendly CSS (fonts, headings, code blocks, tables, ruby, etc.) is embedded in `<head>` when `--css` is passed on the CLI or `include_css=True` is used in Python (the library default).
 
 ```html
 <!doctype html>
@@ -225,7 +225,7 @@ published: 2026-08-09
     <title>My Document</title>
     <meta name="published" content="2026-08-09" />
     <style>
-      /* default print-friendly CSS */
+      /* default viewing-friendly CSS */
     </style>
   </head>
   <body>
@@ -264,7 +264,7 @@ If you need to render a Markdown symbol literally, escape it by prefixing with a
 
 ### 9. CSS Styles
 
-The converter embeds a default `<style>` block in `<head>` that provides view-friendly styling.
+The converter embeds a default `<style>` block in `<head>` that provides viewing-friendly styling.
 Full list of CSS rules (available in code as `MarkdownToHTML.DOCUMENT_CSS`):
 
 ```
@@ -303,7 +303,7 @@ hr {
   height: 4px;
   margin: 20px 0px;
   border: none;
-  background-color: #808080;
+  background-color: #000000;
 }
 li {
   position: relative;
@@ -317,11 +317,9 @@ dd {
   font-style: italic;
 }
 blockquote {
-  margin-top: 10px;
-  margin-bottom: 10px;
-  margin-left: 10px;
+  margin-left: 0;
   padding-left: 20px;
-  border-left: 4px solid #808080;
+  border-left: 10px solid #f5f5f5;
 }
 mark {
   padding: 0px 2px;
@@ -351,11 +349,11 @@ code {
 pre {
   max-width: 100%;
   margin: 0;
-  padding: 20px 10px;
-  border: 1px solid #808080;
+  padding: 20px;
+  border: 1px solid #000000;
   background-color: #f5f5f5;
   overflow: auto;
-  scrollbar-color: #808080 transparent;
+  scrollbar-color: #000000 transparent;
 }
 pre > code {
   display: block;
@@ -369,7 +367,7 @@ pre > code {
 }
 div.code-lang {
   display: block;
-  padding: 10px;
+  padding: 10px 20px;
   font-family:
     "Noto Sans Mono",
     "Liberation Mono",
@@ -378,7 +376,7 @@ div.code-lang {
     monospace;
   font-size: 0.9em;
   line-height: 1;
-  background-color: #808080;
+  background-color: #000000;
   color: #ffffff;
   font-weight: bold;
 }
@@ -389,18 +387,18 @@ table {
 }
 th, td {
   padding: 10px 12px;
-  border: 1px solid #808080;
+  border: 1px solid #000000;
 }
 th { font-weight: bold; }
 thead tr {
-  background-color: #808080;
+  background-color: #000000;
   color: #ffffff;
 }
 tfoot tr {
   background-color: #f5f5f5;
   font-style: italic;
 }
-tfoot td, tfoot th { border-top: 4px solid #808080; }
+tfoot td, tfoot th { border-top: 4px solid #000000; }
 ruby { ruby-position: over; }
 rt {
   letter-spacing: 0.05em;
