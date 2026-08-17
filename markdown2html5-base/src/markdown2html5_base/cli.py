@@ -30,11 +30,16 @@ def main() -> None:
         default=sys.stdout,
         help="Output HTML5 file (defaults to stdout if not specified)",
     )
+    parser.add_argument(
+        "--css",
+        action="store_true",
+        help="Embed the default print-friendly <style> block in <head>",
+    )
 
     args = parser.parse_args()
 
     try:
-        html_output = MarkdownToHTML().convert(args.input.read())
+        html_output = MarkdownToHTML().convert(args.input.read(), include_css=args.css)
         args.output.write(html_output)
         if html_output and not html_output.endswith("\n"):
             args.output.write("\n")

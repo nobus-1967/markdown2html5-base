@@ -17,25 +17,43 @@ Once installed, the global command-line tool `markdown2html5-base` becomes avail
 ### Basic Commands
 
 * **Show help message:**
-  
-  ```bash
-  markdown2html5-base --help
-  ```
+
+```bash
+markdown2html5-base --help
+```
 * **Show the library version:**
-  
-  ```bash
-  markdown2html5-base -v
-  ```
+
+```bash
+markdown2html5-base -v
+```
 * **Convert a file and save the output:**
-  
-  ```bash
-  markdown2html5-base input.md -o output.html
-  ```
+
+```bash
+markdown2html5-base input.md -o output.html
+```
+* **Embed the default print-friendly CSS in the output document:**
+
+```bash
+markdown2html5-base --css input.md -o output.html
+```
 * **Use inside Unix pipelines:**
-  
-  ```bash
-  echo "# Hello" | markdown2html5-base
-  ```
+
+```bash
+echo "# Hello" | markdown2html5-base
+```
+
+### Embedding the Default CSS
+
+By default the CLI produces a bare HTML fragment (or a document without a `<style>` block). Pass `--css` to embed the embedded view-friendly stylesheet
+in `<head>`:
+
+```bash
+markdown2html5-base --css input.md -o output.html
+```
+
+The embedded CSS covers fonts, headings, code blocks, tables, blockquotes, links, highlight marks, CJK font stacks, ruby annotations, and horizontal
+rules. It is only relevant for files with YAML front matter (which produce a full HTML document); fragment output is unaffected.
+The same behaviour is available in Python via `MarkdownToHTML().convert(text, include_css=True)`.
 
 ---
 
@@ -71,29 +89,29 @@ print(html_output)
 
 ### 2. Extended Syntax
 
-* **Fenced Code Blocks:** HTML content inside code blocks is escaped automatically. Fenced blocks render as `<pre><code>`:
+* **Fenced Code Blocks:** HTML content inside code blocks (three backticks before and after) is escaped automatically. Fenced blocks render as `<pre><code>`. A language tag after the opening fence (e.g., `python`) is rendered as a `<span class="code-lang">[python]</span><br />` label inside the `<code>`:
 
-  ```text
-  <div>Some HTML code</div>
-  ```
+```
+<pre><code><span class="code-lang">[python]</span><br />print("Hello, World!")</code></pre>
+```
 * **Tables:** Cell alignment is configured via the delimiter row. A footer section can be added by separating it with `=` signs; footer rows render in italics:
 
-  ```text
-  | Left | Center | Right |
-  | :--- | :----: | ----: |
-  | Text |  Text  | Text  |
-  |======|========|=======|
-  | Foot |  Foot  | Foot  |
-  ```
+```text
+| Left | Center | Right |
+| :--- | :----: | ----: |
+| Text |  Text  | Text  |
+|======|========|=======|
+| Foot |  Foot  | Foot  |
+```
 
-  This produces a `<tfoot>` section (styled in italics by the default CSS).
+This produces a `<tfoot>` section (styled in italics by the default CSS).
 * **Task Lists:** `- [ ] Pending item` and `- [x] Completed item`
 * **Definition Lists:**
-  
-  ```text
-  Term
-  : Definition of the term
-  ```
+
+```text
+Term
+: Definition of the term
+```
 * **Headings with custom IDs:** `## Custom Heading Title {#custom-id}`
 * **Footnotes:** Insert markers `[^1]` anywhere and define their values globally via `[^1]: Footnote body text.`
 * **Text Markers:** Strikethrough `~~text~~`, text highlight `==marker==`, underline `^^text^^`, subscript `H~2~O`, and superscript `X^2^`
@@ -113,35 +131,35 @@ Annotate blocks or inline text with a language using a valid BCP 47 tag (e.g. `d
 
 * **Block level:** Place `{:lang} ` (with a space after it) at the very start of a line, before the Markdown tag. It renders as the global `lang` attribute on the resulting element and needs no closing marker:
 
-  ```text
-  {:de} # Überschrift
-  {:fr} Un paragraphe français.
-  {:ru} - Пункт списка
-  {:de} > Ein Zitat
-  {:de} | Kopf  | Kopf  |
-        | ----- | ----- |
-        | Zelle | Zelle |
-  ```
+```text
+{:de} # Überschrift
+{:fr} Un paragraphe français.
+{:ru} - Пункт списка
+{:de} > Ein Zitat
+{:de} | Kopf  | Kopf  |
+      | ----- | ----- |
+      | Zelle | Zelle |
+```
 
-  ```html
-  <h1 lang="de">Überschrift</h1>
-  <p lang="fr">Un paragraphe français.</p>
-  <ul lang="ru">
-    <li>Пункт списка</li>
-  </ul>
-  <blockquote lang="de">...</blockquote>
-  <table lang="de">...</table>
-  ```
+```html
+<h1 lang="de">Überschrift</h1>
+<p lang="fr">Un paragraphe français.</p>
+<ul lang="ru">
+  <li>Пункт списка</li>
+</ul>
+<blockquote lang="de">...</blockquote>
+<table lang="de">...</table>
+```
 
 * **Inline level:** Wrap text with `{:lang}...{:}` to render a `<span lang="...">`:
 
-  ```text
-  A French phrase {:fr}"L'État c'est moi"{:} is traditionally attributed to King Louis XIV of France.
-  ```
+```text
+A French phrase {:fr}"L'État c'est moi"{:} is traditionally attributed to King Louis XIV of France
+```
 
-  ```html
-  <p>A French phrase <span lang="fr">&ldquo;L&lsquo;État c&rsquo;est moi&rdquo;</span> is traditionally attributed to King Louis XIV of France</p>
-  ```
+```html
+<p>A French phrase <span lang="fr">&ldquo;L&lsquo;État c&rsquo;est moi&rdquo;</span> is traditionally attributed to King Louis XIV of France</p>
+```
 
 ### 5. Automatic Replacements & Smart Typography
 
@@ -194,7 +212,7 @@ published: 2026-08-09
 * `lang` becomes the `<html lang="...">` attribute (a valid BCP 47 tag).
 * `title` becomes the `<title>` element.
 * `author`, `description`, `keywords`, and `published` become `<meta name="..." content="..." />` tags.
-* A default `<style>` block with print-friendly CSS (fonts, headings, code blocks, tables, ruby, etc.) is embedded in `<head>`.
+* A default `<style>` block with print-friendly CSS (fonts, headings, code blocks, tables, ruby, etc.) is embedded in `<head>` when `--css` is passed on the CLI or `include_css=True` is used in Python (the library default).
 
 ```html
 <!doctype html>
@@ -244,6 +262,213 @@ If you need to render a Markdown symbol literally, escape it by prefixing with a
 | `:ok:`         | `&#128076;` (👌)        |
 | `:check_mark:` | `&#10004;&#65039;` (✔️) |
 
+### 9. CSS Styles
+
+The converter embeds a default `<style>` block in `<head>` that provides view-friendly styling.
+Full list of CSS rules (available in code as `MarkdownToHTML.DOCUMENT_CSS`):
+
+```
+body {
+  padding: 20px;
+  font-family:
+    "Noto Serif",
+    "Liberation Serif",
+    "Times New Roman",
+    Times,
+    serif;
+  font-size: 18px;
+  line-height: 1.4;
+  color: #000000;
+}
+h1, h2, h3, h4, h5, h6 {
+  margin-top: 1.2em;
+  margin-bottom: 0.6em;
+  font-family:
+    "Noto Sans",
+    "Liberation Sans",
+    Arial,
+    sans-serif;
+  font-weight: bold;
+}
+h1 { font-size: 32px; }
+h2 { font-size: 28px; }
+h3 { font-size: 24px; }
+h4 { font-size: 20px; }
+h5 { font-size: 18px; }
+h6 {
+  font-size: 18px;
+  font-style: italic;
+}
+hr {
+  height: 4px;
+  margin: 20px 0px;
+  border: none;
+  background-color: #808080;
+}
+li {
+  position: relative;
+  padding-left: 20px;
+}
+dt { font-weight: bold; }
+dd {
+  position: relative;
+  margin-left: 0;
+  padding-left: 20px;
+  font-style: italic;
+}
+blockquote {
+  margin-top: 10px;
+  margin-bottom: 10px;
+  margin-left: 10px;
+  padding-left: 20px;
+  border-left: 4px solid #808080;
+}
+mark {
+  padding: 0px 2px;
+  border-radius: 4px;
+  background-color: #ffff00;
+}
+a:link { color: #0000cd; }
+a:visited { color: #9400d3; }
+a:hover, a:focus {
+  outline: none;
+  color: #000080;
+}
+a:active { color: #dc143c; }
+code {
+  padding: 2px 4px;
+  border-radius: 4px;
+  font-family:
+    "Noto Sans Mono",
+    "Liberation Mono",
+    "Courier New",
+    Courier,
+    monospace;
+  font-size: 0.9em;
+  line-height: 1;
+  background-color: #f5f5f5;
+}
+pre {
+  max-width: 100%;
+  margin: 0;
+  padding: 20px;
+  border: 1px solid #808080;
+  border-radius: 2px;
+  background-color: #f5f5f5;
+  overflow: auto;
+  scrollbar-color: #808080 transparent;
+}
+pre > code {
+  display: block;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  line-height: 1.2;
+  background-color: transparent;
+  overflow: visible;
+}
+span[class="code-lang"] {
+  display: inline-block;
+  padding-bottom: 20px;
+  font-weight: bold;
+  color: #808080;
+}
+table {
+  width: 100%;
+  margin: 20px 0;
+  border-collapse: collapse;
+}
+th, td {
+  padding: 10px 12px;
+  border: 1px solid #808080;
+}
+th { font-weight: bold; }
+thead tr {
+  background-color: #708090;
+  color: #ffffff;
+}
+tfoot tr {
+  background-color: #f5f5f5;
+  font-style: italic;
+}
+tfoot td, tfoot th { border-top: 4px solid #808080; }
+ruby { ruby-position: over; }
+rt {
+  letter-spacing: 0.05em;
+  font-size: 0.55em;
+  line-break: strict;
+}
+rp { display: none; }
+span[lang="ja"] {
+  font-family:
+    "Noto Serif CJK JP",
+    "Source Han Serif JP",
+    "源ノ明朝",
+    "Source Han Serif",
+    "Hiragino Mincho ProN",
+    "Hiragino Mincho Pro",
+    "IPAexMincho",
+    "IPAMincho",
+    "MS PMincho",
+    "MS Mincho",
+    serif;
+}
+span[lang="zh-CN"], span[lang="zh-Hans"] {
+  font-family:
+    "Noto Serif CJK SC",
+    "Source Han Serif SC",
+    "思源宋体",
+    "Source Han Serif CN",
+    "Source Han Serif",
+    "Songti SC",
+    "FandolSong",
+    "WenQuanYi Bitmap Song",
+    "SimSun",
+    serif;
+}
+span[lang="zh-TW"], span[lang="zh-Hant"] {
+  font-family:
+    "Noto Serif CJK TC",
+    "Source Han Serif TC",
+    "思源宋體",
+    "Source Han Serif TW",
+    "Source Han Serif",
+    "Apple LiSung",
+    "LiSong Pro",
+    "HanaMinA",
+    "PMingLiU",
+    "MingLiU",
+    serif;
+}
+span[lang="zh-HK"] {
+  font-family:
+    "Noto Serif CJK HK",
+    "Source Han Serif HK",
+    "思源宋體 香港",
+    "思源宋體",
+    "Source Han Serif",
+    "Apple LiSung",
+    "LiSong Pro",
+    "HanaMinA",
+    "MingLiU_HKSCS",
+    "PMingLiU",
+    "MingLiU",
+    serif;
+}
+span[lang="ko"] {
+  font-family:
+    "Noto Serif CJK KR",
+    "Source Han Serif KR",
+    "본명조",
+    "Source Han Serif",
+    "AppleMyungjo",
+    "UnBatang",
+    "은바탕",
+    "Batang",
+    serif;
+}
+```
 ---
 
 ## 🧪 Testing

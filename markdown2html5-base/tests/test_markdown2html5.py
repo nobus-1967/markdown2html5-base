@@ -178,6 +178,19 @@ def test_no_front_matter_returns_fragment(converter):
     assert converter.convert("# Hello") == "<h1>Hello</h1>"
 
 
+def test_front_matter_without_css_omits_style(converter):
+    md_text = "---\nlang: en\n---\n# Hi"
+    output = converter.convert(md_text, include_css=False)
+    assert "<style>" not in output
+    assert output.startswith("<!doctype html>")
+
+
+def test_front_matter_with_css_embeds_style(converter):
+    md_text = "---\nlang: en\n---\n# Hi"
+    output = converter.convert(md_text, include_css=True)
+    assert f"<style>\n{MarkdownToHTML.DOCUMENT_CSS}    </style>" in output
+
+
 def test_escape_characters(converter):
     assert converter.convert("\\*\\*text\\*\\*") == "<p>**text**</p>"
     assert converter.convert("1\\/2") == "<p>1/2</p>"
@@ -196,6 +209,15 @@ def test_emoji_shortcodes(converter):
 def test_fenced_code_blocks(converter):
     md_code = "```\n<html>\n  <body>\n```"
     expected = "<pre><code>&lt;html&gt;\n  &lt;body&gt;</code></pre>"
+    assert converter.convert(md_code) == expected
+
+
+def test_fenced_code_block_with_language(converter):
+    md_code = '```python\nprint("Hello, World!")\n```'
+    expected = (
+        '<pre><code><span class="code-lang">[python]</span><br />'
+        'print("Hello, World!")</code></pre>'
+    )
     assert converter.convert(md_code) == expected
 
 

@@ -122,155 +122,204 @@ class MarkdownToHTML:
     )
 
     DOCUMENT_CSS: ClassVar[str] = """body {
-  font-family: "Noto Serif", "Liberation Serif", "Times New Roman", Times, serif;
+  padding: 20px;
+  font-family:
+    "Noto Serif",
+    "Liberation Serif",
+    "Times New Roman",
+    Times,
+    serif;
   font-size: 18px;
   line-height: 1.4;
-  padding: 20px;
   color: #000000;
 }
 h1, h2, h3, h4, h5, h6 {
-  font-family: "Noto Sans", "Liberation Sans", Arial, sans-serif;
-  font-weight: bold;
   margin-top: 1.2em;
   margin-bottom: 0.6em;
+  font-family:
+    "Noto Sans",
+    "Liberation Sans",
+    Arial,
+    sans-serif;
+  font-weight: bold;
 }
-h1 {
-  font-size: 32px;
-}
-h2 {
-  font-size: 28px;
-}
-h3 {
-  font-size: 24px;
-}
-h4 {
-  font-size: 20px;
-}
-h5, h6 {
-  font-size: 18px;
-}
+h1 { font-size: 32px; }
+h2 { font-size: 28px; }
+h3 { font-size: 24px; }
+h4 { font-size: 20px; }
+h5 { font-size: 18px; }
 h6 {
+  font-size: 18px;
   font-style: italic;
+}
+hr {
+  height: 4px;
+  margin: 20px 0px;
+  border: none;
+  background-color: #808080;
 }
 li {
   position: relative;
-  margin-left: 20px;
-  padding-left: 4px;
+  padding-left: 20px;
 }
-dt {
-  font-weight: bold;
-}
+dt { font-weight: bold; }
 dd {
-  font-style: italic;
   position: relative;
   margin-left: 0;
-  padding-left: 40px;
+  padding-left: 20px;
+  font-style: italic;
 }
 blockquote {
-  border-left: 4px solid #808080;
-  margin-left: 10px;
-  padding-left: 20px;
   margin-top: 10px;
   margin-bottom: 10px;
-}
-a:link {
-  color: #0000cd;
-}
-a:visited {
-  color: #9400d3;
-}
-a:hover, a:focus {
-  color: #000080;
-  outline: none;
-}
-a:active {
-  color: #dc143c;
+  margin-left: 10px;
+  padding-left: 20px;
+  border-left: 4px solid #808080;
 }
 mark {
-  background-color: #ffff00;
   padding: 0px 2px;
   border-radius: 4px;
+  background-color: #ffff00;
 }
+a:link { color: #0000cd; }
+a:visited { color: #9400d3; }
+a:hover, a:focus {
+  outline: none;
+  color: #000080;
+}
+a:active { color: #dc143c; }
 code {
-  font-family: "Noto Sans Mono", "Liberation Mono", Courier, monospace;
-  background-color: #f5f5f5;
   padding: 2px 4px;
   border-radius: 4px;
+  font-family:
+    "Noto Sans Mono",
+    "Liberation Mono",
+    "Courier New",
+    Courier,
+    monospace;
   font-size: 0.9em;
+  line-height: 1;
+  background-color: #f5f5f5;
 }
 pre {
-  background-color: #f5f5f5;
-  border: 1px solid #808080;
-  border-radius: 2px;
+  max-width: 100%;
   margin: 0;
   padding: 20px;
-  max-width: 100%;
+  border: 1px solid #808080;
+  border-radius: 2px;
+  background-color: #f5f5f5;
   overflow: auto;
   scrollbar-color: #808080 transparent;
 }
 pre > code {
   display: block;
-  line-height: 1.2;
-  background-color: transparent;
   margin: 0;
   padding: 0;
   border: none;
   border-radius: 0;
+  line-height: 1.2;
+  background-color: transparent;
   overflow: visible;
 }
+span[class="code-lang"] {
+  display: inline-block;
+  padding-bottom: 20px;
+  font-weight: bold;
+  color: #808080;
+}
 table {
-  border-collapse: collapse;
-  margin: 20px 0;
   width: 100%;
+  margin: 20px 0;
+  border-collapse: collapse;
 }
 th, td {
   padding: 10px 12px;
   border: 1px solid #808080;
 }
+th { font-weight: bold; }
 thead tr {
-  background-color: #808080;
+  background-color: #708090;
   color: #ffffff;
-}
-th {
-  font-weight: bold;
 }
 tfoot tr {
   background-color: #f5f5f5;
   font-style: italic;
-  border-top: 4px solid #808080;
 }
-span[lang="ja"] {
-  font-family: "Noto Serif CJK JP", "Source Han Serif JP", "源ノ明朝", "Source Han Serif", "Hiragino Mincho ProN", "Hiragino Mincho Pro", "IPAexMincho", "IPAMincho", "MS PMincho", "MS Mincho", serif;
-}
-span[lang="zh-CN"], span[lang="zh-Hans"] {
-  font-family: "Noto Serif CJK SC", "Source Han Serif SC", "思源宋体", "Source Han Serif CN", "Source Han Serif", "Songti SC", "FandolSong", "WenQuanYi Bitmap Song", "SimSun", serif;
-}
-span[lang="zh-TW"], span[lang="zh-Hant"] {
-  font-family: "Noto Serif CJK TC", "Source Han Serif TC", "思源宋體", "Source Han Serif TW", "Source Han Serif", "Apple LiSung", "LiSong Pro", "HanaMinA", "PMingLiU", "MingLiU", serif;
-}
-span[lang="zh-HK"] {
-  font-family: "Noto Serif CJK HK", "Source Han Serif HK", "思源宋體 香港", "思源宋體", "Source Han Serif", "Apple LiSung", "LiSong Pro", "HanaMinA", "MingLiU_HKSCS", "PMingLiU", "MingLiU", serif;
-}
-span[lang="ko"] {
-  font-family: "Noto Serif CJK KR", "Source Han Serif KR", "본명조", "Source Han Serif", "AppleMyungjo", "UnBatang", "은바탕", "Batang", serif;
-}
-ruby {
-  ruby-position: over;
-  ruby-align: center;
-}
+tfoot td, tfoot th { border-top: 4px solid #808080; }
+ruby { ruby-position: over; }
 rt {
-  font-size: 0.55em;
   letter-spacing: 0.05em;
+  font-size: 0.55em;
   line-break: strict;
 }
-rp {
-  display: none;
+rp { display: none; }
+span[lang="ja"] {
+  font-family:
+    "Noto Serif CJK JP",
+    "Source Han Serif JP",
+    "源ノ明朝",
+    "Source Han Serif",
+    "Hiragino Mincho ProN",
+    "Hiragino Mincho Pro",
+    "IPAexMincho",
+    "IPAMincho",
+    "MS PMincho",
+    "MS Mincho",
+    serif;
 }
-hr {
-  border: none;
-  height: 4px;
-  background-color: #808080;
-  margin: 20px 0px;
+span[lang="zh-CN"], span[lang="zh-Hans"] {
+  font-family:
+    "Noto Serif CJK SC",
+    "Source Han Serif SC",
+    "思源宋体",
+    "Source Han Serif CN",
+    "Source Han Serif",
+    "Songti SC",
+    "FandolSong",
+    "WenQuanYi Bitmap Song",
+    "SimSun",
+    serif;
+}
+span[lang="zh-TW"], span[lang="zh-Hant"] {
+  font-family:
+    "Noto Serif CJK TC",
+    "Source Han Serif TC",
+    "思源宋體",
+    "Source Han Serif TW",
+    "Source Han Serif",
+    "Apple LiSung",
+    "LiSong Pro",
+    "HanaMinA",
+    "PMingLiU",
+    "MingLiU",
+    serif;
+}
+span[lang="zh-HK"] {
+  font-family:
+    "Noto Serif CJK HK",
+    "Source Han Serif HK",
+    "思源宋體 香港",
+    "思源宋體",
+    "Source Han Serif",
+    "Apple LiSung",
+    "LiSong Pro",
+    "HanaMinA",
+    "MingLiU_HKSCS",
+    "PMingLiU",
+    "MingLiU",
+    serif;
+}
+span[lang="ko"] {
+  font-family:
+    "Noto Serif CJK KR",
+    "Source Han Serif KR",
+    "본명조",
+    "Source Han Serif",
+    "AppleMyungjo",
+    "UnBatang",
+    "은바탕",
+    "Batang",
+    serif;
 }
 """
 
@@ -299,7 +348,12 @@ hr {
         body = "\n".join(lines[end + 1 :])
         return body, front_matter
 
-    def _build_document(self, body: str, front_matter: dict[str, str]) -> str:
+    def _build_document(
+        self,
+        body: str,
+        front_matter: dict[str, str],
+        include_css: bool = True,
+    ) -> str:
         lang = front_matter.get("lang", "")
         lang_attr = f' lang="{lang}"' if lang else ""
 
@@ -322,7 +376,8 @@ hr {
             head.append(
                 f'    <meta name="published" content="{front_matter["published"]}" />'
             )
-        head.append(f"    <style>\n{self.DOCUMENT_CSS}    </style>")
+        if include_css:
+            head.append(f"    <style>\n{self.DOCUMENT_CSS}    </style>")
 
         lines = ["<!doctype html>", f"<html{lang_attr}>", "  <head>"]
         lines.extend(head)
@@ -340,8 +395,10 @@ hr {
     def _escape_html(text: str) -> str:
         return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
-    def _render_code_block(self, content: str) -> str:
+    def _render_code_block(self, content: str, lang: str = "") -> str:
         escaped = self._escape_html(content)
+        if lang:
+            escaped = f'<span class="code-lang">[{lang}]</span><br />{escaped}'
         return f"<pre><code>{escaped}</code></pre>"
 
     def _render_paragraph(self, buffer_lines: list[str], lang: str = "") -> str:
@@ -362,7 +419,7 @@ hr {
             text = text.replace(placeholder, clean_char)
         return text
 
-    def convert(self, text: str) -> str:
+    def convert(self, text: str, include_css: bool = True) -> str:
         if not text.strip():
             return ""
 
@@ -385,6 +442,7 @@ hr {
         paragraph_lang = ""
         quote_lang = ""
         table_lang = ""
+        code_lang = ""
 
         list_just_closed = False
 
@@ -408,11 +466,13 @@ hr {
             if stripped.startswith("```"):
                 if in_code_block:
                     code_content = "\n".join(code_buffer)
-                    html_lines.append(self._render_code_block(code_content))
+                    html_lines.append(self._render_code_block(code_content, code_lang))
                     code_buffer = []
                     in_code_block = False
+                    code_lang = ""
                 else:
                     flush_pending()
+                    code_lang = stripped[3:].strip()
                     in_code_block = True
                 continue
 
@@ -616,7 +676,7 @@ hr {
         final_html = "\n".join(html_lines)
         final_html = self._restore_escapes(final_html)
         if front_matter:
-            return self._build_document(final_html, front_matter)
+            return self._build_document(final_html, front_matter, include_css)
         return final_html
 
     def _render_footnotes(self, footnotes: dict[str, str]) -> list[str]:
