@@ -33,7 +33,7 @@ def main() -> None:
     parser.add_argument(
         "--css",
         action="store_true",
-        help="Embed the default print-friendly <style> block in <head>",
+        help="Embed the default viewing-friendly <style> block in <head>",
     )
 
     args = parser.parse_args()
