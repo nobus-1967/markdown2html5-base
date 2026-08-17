@@ -215,8 +215,8 @@ def test_fenced_code_blocks(converter):
 def test_fenced_code_block_with_language(converter):
     md_code = '```python\nprint("Hello, World!")\n```'
     expected = (
-        '<pre><code><span class="code-lang">[python]</span><br />'
-        'print("Hello, World!")</code></pre>'
+        '<div class="code-lang">[python]</div>'
+        '<pre><code>print("Hello, World!")</code></pre>'
     )
     assert converter.convert(md_code) == expected
 

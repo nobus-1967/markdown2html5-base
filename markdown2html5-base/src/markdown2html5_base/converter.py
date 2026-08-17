@@ -204,9 +204,8 @@ code {
 pre {
   max-width: 100%;
   margin: 0;
-  padding: 20px;
+  padding: 20px 10px;
   border: 1px solid #808080;
-  border-radius: 2px;
   background-color: #f5f5f5;
   overflow: auto;
   scrollbar-color: #808080 transparent;
@@ -221,11 +220,20 @@ pre > code {
   background-color: transparent;
   overflow: visible;
 }
-span[class="code-lang"] {
-  display: inline-block;
-  padding-bottom: 20px;
+div.code-lang {
+  display: block;
+  padding: 10px;
+  font-family:
+    "Noto Sans Mono",
+    "Liberation Mono",
+    "Courier New",
+    Courier,
+    monospace;
+  font-size: 0.9em;
+  line-height: 1;
+  background-color: #808080;
+  color: #ffffff;
   font-weight: bold;
-  color: #808080;
 }
 table {
   width: 100%;
@@ -238,7 +246,7 @@ th, td {
 }
 th { font-weight: bold; }
 thead tr {
-  background-color: #708090;
+  background-color: #808080;
   color: #ffffff;
 }
 tfoot tr {
@@ -397,9 +405,8 @@ span[lang="ko"] {
 
     def _render_code_block(self, content: str, lang: str = "") -> str:
         escaped = self._escape_html(content)
-        if lang:
-            escaped = f'<span class="code-lang">[{lang}]</span><br />{escaped}'
-        return f"<pre><code>{escaped}</code></pre>"
+        label = f'<div class="code-lang">[{lang}]</div>' if lang else ""
+        return f"{label}<pre><code>{escaped}</code></pre>"
 
     def _render_paragraph(self, buffer_lines: list[str], lang: str = "") -> str:
         lang_attr = self._lang_attr(lang)

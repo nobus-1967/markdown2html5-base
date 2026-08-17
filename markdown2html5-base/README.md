@@ -89,10 +89,10 @@ print(html_output)
 
 ### 2. Extended Syntax
 
-* **Fenced Code Blocks:** HTML content inside code blocks (three backticks before and after) is escaped automatically. Fenced blocks render as `<pre><code>`. A language tag after the opening fence (e.g., `python`) is rendered as a `<span class="code-lang">[python]</span><br />` label inside the `<code>`:
+* **Fenced Code Blocks:** HTML content inside code blocks (three backticks before and after) is escaped automatically. Fenced blocks render as `<pre><code>`. A language tag after the opening fence (e.g., `python`) is rendered as a `<div class="code-lang">[python]</div>` label above the `<code>` block:
 
 ```
-<pre><code><span class="code-lang">[python]</span><br />print("Hello, World!")</code></pre>
+<div class="code-lang">[python]</div><pre><code>print("Hello, World!")</code></pre>
 ```
 * **Tables:** Cell alignment is configured via the delimiter row. A footer section can be added by separating it with `=` signs; footer rows render in italics:
 
@@ -351,9 +351,8 @@ code {
 pre {
   max-width: 100%;
   margin: 0;
-  padding: 20px;
+  padding: 20px 10px;
   border: 1px solid #808080;
-  border-radius: 2px;
   background-color: #f5f5f5;
   overflow: auto;
   scrollbar-color: #808080 transparent;
@@ -368,11 +367,20 @@ pre > code {
   background-color: transparent;
   overflow: visible;
 }
-span[class="code-lang"] {
-  display: inline-block;
-  padding-bottom: 20px;
+div.code-lang {
+  display: block;
+  padding: 10px;
+  font-family:
+    "Noto Sans Mono",
+    "Liberation Mono",
+    "Courier New",
+    Courier,
+    monospace;
+  font-size: 0.9em;
+  line-height: 1;
+  background-color: #808080;
+  color: #ffffff;
   font-weight: bold;
-  color: #808080;
 }
 table {
   width: 100%;
@@ -385,7 +393,7 @@ th, td {
 }
 th { font-weight: bold; }
 thead tr {
-  background-color: #708090;
+  background-color: #808080;
   color: #ffffff;
 }
 tfoot tr {
