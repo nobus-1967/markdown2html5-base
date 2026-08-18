@@ -93,6 +93,8 @@ class MarkdownToHTML:
         (r"2/3", "&frac23;"),
         (r"1/4", "&frac14;"),
         (r"3/4", "&frac34;"),
+        (r":slash:", "&sol;"),
+        (r":bslash:", "&bsol;"),
         (r"<<", "&laquo;"),
         (r">>", "&raquo;"),
         (r'"([^"\n]+)"', r"&ldquo;\1&rdquo;"),
@@ -119,6 +121,7 @@ class MarkdownToHTML:
         "description",
         "keywords",
         "published",
+        "date",
     )
 
     DOCUMENT_CSS: ClassVar[str] = """body {
@@ -154,7 +157,7 @@ h6 {
 }
 hr {
   height: 4px;
-  margin: 20px 0px;
+  margin: 20px 0;
   border: none;
   background-color: #000000;
 }
@@ -172,10 +175,10 @@ dd {
 blockquote {
   margin-left: 0;
   padding-left: 20px;
-  border-left: 10px solid #f5f5f5;
+  border-left: 8px solid #f5f5f5;
 }
 mark {
-  padding: 0px 2px;
+  padding: 0 2px;
   border-radius: 4px;
   background-color: #ffff00;
 }
@@ -234,7 +237,6 @@ div.code-lang {
   font-weight: bold;
 }
 table {
-  width: 100%;
   margin: 20px 0;
   border-collapse: collapse;
 }
@@ -251,7 +253,6 @@ tfoot tr {
   background-color: #f5f5f5;
   font-style: italic;
 }
-tfoot td, tfoot th { border-top: 4px solid #000000; }
 ruby { ruby-position: over; }
 rt {
   letter-spacing: 0.05em;
@@ -348,8 +349,13 @@ span[lang="ko"] {
                 continue
             key, _, value = line.partition(":")
             key, value = key.strip(), value.strip()
+            if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
+                value = value[1:-1]
             if key in self.FRONT_MATTER_KEYS:
                 front_matter[key] = value
+
+        if "date" in front_matter and "published" not in front_matter:
+            front_matter["published"] = front_matter.pop("date")
 
         body = "\n".join(lines[end + 1 :])
         return body, front_matter
@@ -358,7 +364,7 @@ span[lang="ko"] {
         self,
         body: str,
         front_matter: dict[str, str],
-        include_css: bool = True,
+        include_css: bool = False,
     ) -> str:
         lang = front_matter.get("lang", "")
         lang_attr = f' lang="{lang}"' if lang else ""
@@ -403,7 +409,7 @@ span[lang="ko"] {
 
     def _render_code_block(self, content: str, lang: str = "") -> str:
         escaped = self._escape_html(content)
-        label = f'<div class="code-lang">[{lang}]</div>' if lang else ""
+        label = f'<div class="code-lang">&sol;{lang}&sol;</div>' if lang else ""
         return f"{label}<pre><code>{escaped}</code></pre>"
 
     def _render_paragraph(self, buffer_lines: list[str], lang: str = "") -> str:
@@ -424,7 +430,7 @@ span[lang="ko"] {
             text = text.replace(placeholder, clean_char)
         return text
 
-    def convert(self, text: str, include_css: bool = True) -> str:
+    def convert(self, text: str, include_css: bool = False) -> str:
         if not text.strip():
             return ""
 
@@ -680,7 +686,7 @@ span[lang="ko"] {
 
         final_html = "\n".join(html_lines)
         final_html = self._restore_escapes(final_html)
-        if front_matter:
+        if front_matter or include_css:
             return self._build_document(final_html, front_matter, include_css)
         return final_html
 
@@ -813,7 +819,7 @@ span[lang="ko"] {
             if has_break:
                 inline += "<br />"
             processed.append(inline)
-        return self._apply_footnote_refs("\n".join(processed))
+        return "\n".join(processed)
 
     def _flush_all_buffers(
         self,
@@ -865,20 +871,25 @@ span[lang="ko"] {
         # Emoji shortcodes
         for code, emoji in self.EMOJIS.items():
             text = text.replace(f":{code}:", emoji)
+        # Typography and math symbol replacements
+        for pattern, replacement in self.TYPOGRAPHY_RULES:
+            text = re.sub(pattern, replacement, text)
         # Ruby annotation (base cannot contain : } { | so {:lang} stays intact)
         text = re.sub(
             r"\{([^{}:|]+)\|([^}]+)\}",
             r"<ruby>\1<rp>(</rp><rt>\2</rt><rp>)</rp></ruby>",
             text,
         )
-        # Typography and math symbol replacements
-        for pattern, replacement in self.TYPOGRAPHY_RULES:
-            text = re.sub(pattern, replacement, text)
         # Inline text styling
         for pattern, replacement in self.INLINE_RULES:
             text = re.sub(pattern, replacement, text)
         # Inline language spans: {:lang}...{:} -> <span lang="lang">...</span>
         text = self.INLINE_LANG_RE.sub(r'<span lang="\1">\2</span>', text)
+
+        # Footnote references (code spans are still protected, so [^1]
+        # inside backticks stays literal; applied after smart quotes so
+        # the generated attribute quotes stay straight)
+        text = self._apply_footnote_refs(text)
 
         # Restore inline code spans with HTML-escaped content
         for key, content in code_spans.items():

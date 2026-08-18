@@ -44,15 +44,15 @@ echo "# Hello" | markdown2html5-base
 
 ### Embedding the Default CSS
 
-By default the CLI produces a bare HTML fragment (or a document without a `<style>` block). Pass `--css` to embed the embedded viewing-friendly stylesheet
-in `<head>`:
+By default the CLI produces a bare HTML fragment (or a document without a `<style>` block). Pass `--css` to embed the viewing-friendly stylesheet
+in `<head>` and wrap the output in a full HTML document:
 
 ```bash
 markdown2html5-base --css input.md -o output.html
 ```
 
 The embedded CSS covers fonts, headings, code blocks, tables, blockquotes, links, highlight marks, CJK font stacks, ruby annotations, and horizontal
-rules. It is only relevant for files with YAML front matter (which produce a full HTML document); fragment output is unaffected.
+rules. `--css` works regardless of YAML front matter.
 The same behaviour is available in Python via `MarkdownToHTML().convert(text, include_css=True)`.
 
 ---
@@ -89,10 +89,10 @@ print(html_output)
 
 ### 2. Extended Syntax
 
-* **Fenced Code Blocks:** HTML content inside code blocks (three backticks before and after) is escaped automatically. Fenced blocks render as `<pre><code>`. A language tag after the opening fence (e.g., `python`) is rendered as a `<div class="code-lang">[python]</div>` label above the `<code>` block:
+* **Fenced Code Blocks:** HTML content inside code blocks (three backticks before and after) is escaped automatically. Fenced blocks render as `<pre><code>`. A language tag after the opening fence (e.g., `python`) is rendered as a `<div class="code-lang">&sol;python&sol;</div>` label above the `<code>` block:
 
 ```
-<div class="code-lang">[python]</div><pre><code>print("Hello, World!")</code></pre>
+<div class="code-lang">&sol;python&sol;</div><pre><code>print("Hello, World!")</code></pre>
 ```
 * **Tables:** Cell alignment is configured via the delimiter row. A footer section can be added by separating it with `=` signs; footer rows render in italics:
 
@@ -185,6 +185,8 @@ The converter formats raw text on the fly for professional typesetting, emitting
 | `2/3`       | `&frac23;` (⅔)      |
 | `1/4`       | `&frac14;` (¼)       |
 | `3/4`       | `&frac34;` (¾)       |
+| `:slash:`   | `&sol;` (/)          |
+| `:bslash:`  | `&bsol;` (\)         |
 | `<<`        | `&laquo;` («)        |
 | `>>`        | `&raquo;` (»)        |
 | `"text"`    | `&ldquo;text&rdquo;` |
@@ -211,8 +213,8 @@ published: 2026-08-09
 
 * `lang` becomes the `<html lang="...">` attribute (a valid BCP 47 tag).
 * `title` becomes the `<title>` element.
-* `author`, `description`, `keywords`, and `published` become `<meta name="..." content="..." />` tags.
-* A default `<style>` block with viewing-friendly CSS (fonts, headings, code blocks, tables, ruby, etc.) is embedded in `<head>` when `--css` is passed on the CLI or `include_css=True` is used in Python (the library default).
+* `author`, `description`, `keywords`, and `published` become `<meta name="..." content="..." />` tags. `date` is accepted as an alias for `published`.
+* A default `<style>` block with viewing-friendly CSS (fonts, headings, code blocks, tables, ruby, etc.) is embedded in `<head>` when `--css` is passed on the CLI or `include_css=True` is used in Python.
 
 ```html
 <!doctype html>
@@ -264,7 +266,7 @@ If you need to render a Markdown symbol literally, escape it by prefixing with a
 
 ### 9. CSS Styles
 
-The converter embeds a default `<style>` block in `<head>` that provides viewing-friendly styling.
+The converter can embed a default `<style>` block in `<head>` (with `--css` or `include_css=True`) that provides viewing-friendly styling, regardless of YAML front matter.
 Full list of CSS rules (available in code as `MarkdownToHTML.DOCUMENT_CSS`):
 
 ```
@@ -301,7 +303,7 @@ h6 {
 }
 hr {
   height: 4px;
-  margin: 20px 0px;
+  margin: 20px 0;
   border: none;
   background-color: #000000;
 }
@@ -319,10 +321,10 @@ dd {
 blockquote {
   margin-left: 0;
   padding-left: 20px;
-  border-left: 10px solid #f5f5f5;
+  border-left: 8px solid #f5f5f5;
 }
 mark {
-  padding: 0px 2px;
+  padding: 0 2px;
   border-radius: 4px;
   background-color: #ffff00;
 }
@@ -381,7 +383,6 @@ div.code-lang {
   font-weight: bold;
 }
 table {
-  width: 100%;
   margin: 20px 0;
   border-collapse: collapse;
 }
@@ -398,7 +399,6 @@ tfoot tr {
   background-color: #f5f5f5;
   font-style: italic;
 }
-tfoot td, tfoot th { border-top: 4px solid #000000; }
 ruby { ruby-position: over; }
 rt {
   letter-spacing: 0.05em;

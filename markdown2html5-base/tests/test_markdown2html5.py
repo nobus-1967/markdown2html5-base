@@ -1,4 +1,5 @@
 import pytest
+
 from markdown2html5_base.converter import MarkdownToHTML
 
 
@@ -111,6 +112,7 @@ def test_typography_and_math(converter):
     assert converter.convert('"Hello" and <<World>>') == (
         "<p>&ldquo;Hello&rdquo; and &laquo;World&raquo;</p>"
     )
+    assert converter.convert(":slash: :bslash:") == "<p>&sol; &bsol;</p>"
 
 
 def test_typography_arrows(converter):
@@ -154,7 +156,7 @@ def test_front_matter_full_document(converter):
         "  </body>\n"
         "</html>"
     )
-    assert converter.convert(md_text) == expected
+    assert converter.convert(md_text, include_css=True) == expected
 
 
 def test_front_matter_only_lang(converter):
@@ -171,11 +173,18 @@ def test_front_matter_only_lang(converter):
         "  </body>\n"
         "</html>"
     )
-    assert converter.convert(md_text) == expected
+    assert converter.convert(md_text, include_css=True) == expected
 
 
-def test_no_front_matter_returns_fragment(converter):
-    assert converter.convert("# Hello") == "<h1>Hello</h1>"
+def test_no_front_matter_without_css_returns_fragment(converter):
+    assert converter.convert("# Hello", include_css=False) == "<h1>Hello</h1>"
+
+
+def test_no_front_matter_with_css_returns_document(converter):
+    output = converter.convert("# Hello", include_css=True)
+    assert output.startswith("<!doctype html>")
+    assert f"<style>\n{MarkdownToHTML.DOCUMENT_CSS}    </style>" in output
+    assert "<h1>Hello</h1>" in output
 
 
 def test_front_matter_without_css_omits_style(converter):
@@ -215,7 +224,7 @@ def test_fenced_code_blocks(converter):
 def test_fenced_code_block_with_language(converter):
     md_code = '```python\nprint("Hello, World!")\n```'
     expected = (
-        '<div class="code-lang">[python]</div>'
+        '<div class="code-lang">&sol;python&sol;</div>'
         '<pre><code>print("Hello, World!")</code></pre>'
     )
     assert converter.convert(md_code) == expected
