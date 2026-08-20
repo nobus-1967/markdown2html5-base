@@ -346,7 +346,6 @@ code {
     monospace;
   font-size: 0.9em;
   line-height: 1;
-  background-color: #f5f5f5;
 }
 pre {
   max-width: 100%;
