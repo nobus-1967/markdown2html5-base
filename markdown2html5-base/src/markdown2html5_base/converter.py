@@ -252,6 +252,21 @@ tfoot tr {
   background-color: #f5f5f5;
   font-style: italic;
 }
+figure {
+  display: table;
+  margin: 0;
+}
+figure img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+figcaption {
+  display: table-caption;
+  caption-side: bottom;
+  text-align: left;
+  word-break: break-word;
+}
 ruby { ruby-position: over; }
 rt {
   letter-spacing: 0.05em;
@@ -330,6 +345,7 @@ span[lang="ko"] {
 """
 
     def _parse_front_matter(self, text: str) -> tuple[str, dict[str, str]]:
+        """Parse optional YAML-style front matter, returning body text and fields."""
         if not text.startswith("---\n"):
             return text, {}
         lines = text.split("\n")
@@ -407,13 +423,37 @@ span[lang="ko"] {
         return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
     def _render_code_block(self, content: str, lang: str = "") -> str:
+        """Render escaped code content inside ``<pre><code>``, with optional lang label."""
         escaped = self._escape_html(content)
         label = f'<div class="code-lang">&sol;{lang}&sol;</div>' if lang else ""
         return f"{label}<pre><code>{escaped}</code></pre>"
 
     def _render_paragraph(self, buffer_lines: list[str], lang: str = "") -> str:
-        lang_attr = self._lang_attr(lang)
-        return f"<p{lang_attr}>{self._process_paragraph_breaks(buffer_lines)}</p>"
+        """Render buffered lines as a paragraph, or unwrapped for figure blocks.
+
+        A block that is entirely a ``<figure>`` element is returned verbatim so
+        it is not wrapped in a ``<p>`` tag.
+        """
+        content = self._process_paragraph_breaks(buffer_lines)
+        if self._is_figure_block(content):
+            return content
+        return f"<p{self._lang_attr(lang)}>{content}</p>"
+
+    def _wrap_paragraph(self, buffer_lines: list[str]) -> str:
+        """Wrap buffered lines in a ``<p>`` tag, preserving figure blocks.
+
+        Used for blockquote paragraphs where no language attribute applies.
+        """
+        content = self._process_paragraph_breaks(buffer_lines)
+        if self._is_figure_block(content):
+            return content
+        return f"<p>{content}</p>"
+
+    @staticmethod
+    def _is_figure_block(content: str) -> bool:
+        """Return True if ``content`` is a self-contained ``<figure>`` block."""
+        stripped = content.strip()
+        return stripped.startswith("<figure>") and stripped.endswith("</figure>")
 
     def _apply_footnote_refs(self, text: str) -> str:
         return self.FOOTNOTE_REF_RE.sub(self.FOOTNOTE_REF_HTML, text)
@@ -430,6 +470,11 @@ span[lang="ko"] {
         return text
 
     def convert(self, text: str, include_css: bool = False) -> str:
+        """Convert Markdown ``text`` to an HTML string.
+
+        When ``include_css`` is True the output is wrapped in a full document
+        with the built-in stylesheet; otherwise only the body HTML is returned.
+        """
         if not text.strip():
             return ""
 
@@ -690,6 +735,7 @@ span[lang="ko"] {
         return final_html
 
     def _render_footnotes(self, footnotes: dict[str, str]) -> list[str]:
+        """Render collected footnotes as an ordered list with back-references."""
         if not footnotes:
             return []
         lines = ['<div class="footnotes">\n  <hr>\n  <ol>']
@@ -718,12 +764,12 @@ span[lang="ko"] {
         for item in quote_buffer:
             if item.strip() == "":
                 if curr:
-                    subs.append(f"  <p>{self._process_paragraph_breaks(curr)}</p>")
+                    subs.append(f"  {self._wrap_paragraph(curr)}")
                     curr = []
             else:
                 curr.append(item)
         if curr:
-            subs.append(f"  <p>{self._process_paragraph_breaks(curr)}</p>")
+            subs.append(f"  {self._wrap_paragraph(curr)}")
         html_lines.extend(subs)
         html_lines.append("</blockquote>")
 
@@ -741,6 +787,7 @@ span[lang="ko"] {
         return "\n".join(["    <tr>", *cell_lines, "    </tr>"])
 
     def _compile_table(self, rows: list[str], lang: str = "") -> str:
+        """Compile raw table rows into ``<thead>``/``<tbody>``/``<tfoot>`` blocks."""
         if len(rows) < 2:
             return "\n".join(rows)
 
@@ -793,6 +840,7 @@ span[lang="ko"] {
         return "\n".join(html)
 
     def _extract_footnotes(self, text: str) -> tuple[str, dict[str, str]]:
+        """Pull footnote definitions out of ``text`` into a mapping keyed by id."""
         footnotes: dict[str, str] = {}
         clean_lines = []
         for line in text.split("\n"):
@@ -841,12 +889,14 @@ span[lang="ko"] {
             t_rows.clear()
 
     def _apply_inline_rules(self, text: str) -> str:
+        """Apply inline formatting rules (code, images, emoji, typography, etc.)."""
         # Protect inline code spans so their content stays literal (no
         # typography, emoji, or raw HTML such as <title> that would make
         # browsers swallow the rest of the document as RCDATA).
         code_spans: dict[str, str] = {}
 
         def protect_code(match: re.Match) -> str:
+            """Replace an inline code span with a placeholder to shield it."""
             key = f"\x00CODE{len(code_spans)}\x00"
             code_spans[key] = match.group(1)
             return key
@@ -858,11 +908,24 @@ span[lang="ko"] {
         img_tags: dict[str, str] = {}
 
         def protect_image(match: re.Match) -> str:
+            """Replace an image reference with a placeholder and record its HTML.
+
+            Images are emitted inside a ``<figure>`` element; when a title is
+            present it is repeated in a ``<figcaption>``. Placeholders keep
+            the generated attributes safe from later typography rules.
+            """
             key = f"\x00IMG{len(img_tags)}\x00"
-            title_attr = f' title="{match.group(3)}"' if match.group(3) else ""
-            img_tags[key] = (
-                f'<img src="{match.group(2)}" alt="{match.group(1)}"{title_attr}>'
-            )
+            alt = match.group(1)
+            src = match.group(2)
+            title = match.group(3)
+            title_attr = f' title="{title}"' if title else ""
+            img = f'<img src="{src}" alt="{alt}"{title_attr}>'
+            if title:
+                img_tags[key] = (
+                    f"<figure>\n  {img}\n  <figcaption>{title}</figcaption>\n</figure>"
+                )
+            else:
+                img_tags[key] = f"<figure>\n  {img}\n</figure>"
             return key
 
         text = self.IMAGE_RE.sub(protect_image, text)

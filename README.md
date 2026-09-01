@@ -24,7 +24,7 @@ Subscript: `H~2~O` => `<sub>2</sub>` (applied inline as H<sub>2</sub>O)
 
 Link: `[text](url)` => `<a href="url">text</a>`
 
-Image: `![Alt](img.png "Title")` => `<img src="img.png" alt="Alt" title="Title">`
+Image: `![Alt](img.png "Title")` => `<figure><img src="url" alt="alt" title="Title"><figcaption>Title</figcaption></figure>`
 
 Ordered list:
 

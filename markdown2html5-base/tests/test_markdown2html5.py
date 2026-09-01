@@ -55,11 +55,19 @@ def test_inline_code_escapes_html_tags(converter):
 
 def test_images(converter):
     assert converter.convert('![Markdown](./mark_editor.png "Title")') == (
-        '<p><img src="./mark_editor.png" alt="Markdown" title="Title"></p>'
+        "<figure>\n"
+        '  <img src="./mark_editor.png" alt="Markdown" title="Title">\n'
+        "  <figcaption>Title</figcaption>\n"
+        "</figure>"
     )
-    assert converter.convert("![alt](src)") == ('<p><img src="src" alt="alt"></p>')
+    assert converter.convert("![alt](src)") == (
+        '<figure>\n  <img src="src" alt="alt">\n</figure>'
+    )
     assert converter.convert("![alt](src 'Title')") == (
-        '<p><img src="src" alt="alt" title="Title"></p>'
+        "<figure>\n"
+        '  <img src="src" alt="alt" title="Title">\n'
+        "  <figcaption>Title</figcaption>\n"
+        "</figure>"
     )
 
 

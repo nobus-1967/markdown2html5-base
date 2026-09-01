@@ -85,7 +85,7 @@ print(html_output)
 * **Lists:** Unordered (`-` or `*`) and Ordered (`1.`, `2.`)
 * **Horizontal Rules:** `---`, `***`, `___` (rendered as `<hr>`)
 * **Inline Code:** `` `code` `` — HTML inside inline code is escaped automatically, so `` `<title>` `` renders as `&lt;title&gt;` and never as a real tag.
-* **Links and Images:** `[Text](url)` and `![alt](url)`. Images support an optional title: `![alt](url "Title")` → `<img src="url" alt="alt" title="Title">`.
+* **Links and Images:** `[Text](url)` and `![alt](url)`. Images are wrapped in a `<figure>` element; an optional title is repeated in a `<figcaption>`: `![alt](url "Title")` → `<figure><img src="url" alt="alt" title="Title"><figcaption>Title</figcaption></figure>`.
 
 ### 2. Extended Syntax
 
@@ -397,6 +397,21 @@ thead tr {
 tfoot tr {
   background-color: #f5f5f5;
   font-style: italic;
+}
+figure {
+  display: table;
+  margin: 0;
+}
+figure img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+figcaption {
+  display: table-caption;
+  caption-side: bottom;
+  text-align: left;
+  word-break: break-word;
 }
 ruby { ruby-position: over; }
 rt {
