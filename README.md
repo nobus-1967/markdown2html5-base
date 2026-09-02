@@ -117,8 +117,7 @@ Typography replacements (HTML entities):
 * `>=` => `&ge;` (≥)
 * `->` => `&rarr;` (→)
 * `<-` => `&larr;` (←)
-* `:uparrow:` => `&uarr;` (↑)
-* `:dnarrow:` => `&darr;` (↓)
+
 * `=>` => `&rArr;` (⇒)
 * `1/2` => `&frac12;` (½)
 * `1/3` => `&frac13;` (⅓)

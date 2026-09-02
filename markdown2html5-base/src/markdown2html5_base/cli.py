@@ -6,6 +6,7 @@ from markdown2html5_base.converter import MarkdownToHTML
 
 
 def main() -> None:
+    """Convert a Markdown file from the command line, optionally embedding CSS."""
     parser = argparse.ArgumentParser(
         description="Convert Markdown (basic and extended syntax) into valid HTML5."
     )

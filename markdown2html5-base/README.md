@@ -116,7 +116,7 @@ Term
 * **Footnotes:** Insert markers `[^1]` anywhere and define their values globally via `[^1]: Footnote body text.`
 * **Text Markers:** Strikethrough `~~text~~`, text highlight `==marker==`, underline `^^text^^`, subscript `H~2~O`, and superscript `X^2^`
 * **Hidden Comments:** `[comment text]: #` renders as an invisible HTML comment `<!--comment text-->`
-* **Emoji shortcodes:** `:joy:` → `&#128514;` (😂), `:heart:` → `&#10084;&#65039;` (❤️), `:fire:` → `&#128293;` (🔥), and more — see the full table in [Emoji Shortcodes](#8-emoji-shortcodes).
+* **Emoji shortcodes:** `:joy:` → `😂`, `:heart:` → `❤️`, `:fire:` → `🔥`, and more — see the full table in [Emoji Shortcodes](#8-emoji-shortcodes).
 
 ### 3. Ruby Rule (Japanese Furigana)
 
@@ -177,24 +177,27 @@ The converter formats raw text on the fly for professional typesetting, emitting
 | `>=`        | `&ge;` (≥)           |
 | `->`        | `&rarr;` (→)         |
 | `<-`        | `&larr;` (←)         |
-| `:uparrow:` |  `&uarr;` (↑)        |
-| `:dnarrow:` | `&darr;` (↓)         |
+| `&uarr;`    | `&uarr;` (↑)        |
+| `&darr;`    | `&darr;` (↓)         |
 | `=>`        | `&rArr;` (⇒)        |
 | `1/2`       | `&frac12;` (½)       |
 | `1/3`       | `&frac13;` (⅓)      |
 | `2/3`       | `&frac23;` (⅔)      |
 | `1/4`       | `&frac14;` (¼)       |
 | `3/4`       | `&frac34;` (¾)       |
-| `:slash:`   | `&sol;` (/)          |
-| `:bslash:`  | `&bsol;` (\)         |
+| `&sol;`     | `&sol;` (/)          |
+| `&bsol;`    | `&bsol;` (\)         |
 | `<<`        | `&laquo;` («)        |
 | `>>`        | `&raquo;` (»)        |
+| `&ldquo;`   | `&ldquo;`            |
+| `&rdquo;`   | `&rdquo;`            |
 | `"text"`    | `&ldquo;text&rdquo;` |
 | `'text'`    | `&lsquo;text&rsquo;` |
 | `'`         | `&apos;` (')         |
 | `---`       | `&mdash;` (—)        |
 | `--`        | `&ndash;` (–)        |
 | `...`       | `&hellip;` (…)       |
+| `&nbsp;`    | `&nbsp;`             |
 
 ### 6. YAML Front Matter
 
@@ -242,27 +245,27 @@ If you need to render a Markdown symbol literally, escape it by prefixing with a
 
 ### 8. Emoji Shortcodes
 
-| Shortcode      | Output                  |
-| -------------- | ----------------------- |
-| `:joy:`        | `&#128514;` (😂)        |
-| `:smile:`      | `&#128516;` (😄)        |
-| `:heart:`      | `&#10084;&#65039;` (❤️) |
-| `:thumbsup:`   | `&#128077;` (👍)        |
-| `:thumbsdown:` | `&#128078;` (👎)        |
-| `:wink:`       | `&#128521;` (😉)        |
-| `:tada:`       | `&#127881;` (🎉)        |
-| `:rocket:`     | `&#128640;` (🚀)        |
-| `:fire:`       | `&#128293;` (🔥)        |
-| `:star:`       | `&#11088;` (⭐)         |
-| `:cry:`        | `&#128546;` (😢)        |
-| `:thinking:`   | `&#129300;` (🤔)        |
-| `:100:`        | `&#128175;` (💯)        |
-| `:sparkles:`   | `&#10024;` (✨)         |
-| `:eyes:`       | `&#128064;` (👀)        |
-| `:bulb:`       | `&#128161;` (💡)        |
-| `:warning:`    | `&#9888;&#65039;` (⚠️)  |
-| `:ok:`         | `&#128076;` (👌)        |
-| `:check_mark:` | `&#10004;&#65039;` (✔️) |
+| Shortcode      | Output              |
+| -------------- | ------------------- |
+| `:joy:`        | 😂                  |
+| `:smile:`      | 😄                  |
+| `:heart:`      | ❤️                 |
+| `:thumbsup:`   | 👍                  |
+| `:thumbsdown:` | 👎                  |
+| `:wink:`       | 😉                  |
+| `:tada:`       | 🎉                  |
+| `:rocket:`     | 🚀                  |
+| `:fire:`       | 🔥                  |
+| `:star:`       | ⭐                  |
+| `:cry:`        | 😢                  |
+| `:thinking:`   | 🤔                  |
+| `:100:`        | 💯                  |
+| `:sparkles:`   | ✨                  |
+| `:eyes:`       | 👀                  |
+| `:bulb:`       | 💡                  |
+| `:warning:`    | ⚠️                 |
+| `:ok:`         | 👌                  |
+| `:check_mark:` | ✔️                 |
 
 ### 9. CSS Styles
 
