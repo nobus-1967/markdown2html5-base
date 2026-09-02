@@ -399,7 +399,7 @@ tfoot tr {
   font-style: italic;
 }
 figure {
-  display: table;
+  display: block;
   margin: 0;
 }
 figure img {
@@ -408,10 +408,8 @@ figure img {
   height: auto;
 }
 figcaption {
-  display: table-caption;
-  caption-side: bottom;
   text-align: left;
-  word-break: break-word;
+  font-style: italic;
 }
 ruby { ruby-position: over; }
 rt {
