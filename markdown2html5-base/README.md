@@ -275,34 +275,84 @@ Full list of CSS rules (available in code as `MarkdownToHTML.DOCUMENT_CSS`):
 ```
 body {
   padding: 20px;
-  font-family:
-    "Noto Serif",
-    "Liberation Serif",
-    "Times New Roman",
-    Times,
-    serif;
+  font-family: "Noto Serif", "Liberation Serif", "Times New Roman", Times, serif;
   font-size: 18px;
   line-height: 1.4;
   color: #000000;
+  background-color: #ffffff;
 }
-h1, h2, h3, h4, h5, h6 {
+h1 {
   margin-top: 1.2em;
   margin-bottom: 0.6em;
-  font-family:
-    "Noto Sans",
-    "Liberation Sans",
-    Arial,
-    sans-serif;
+  font-family: "Noto Sans", "Liberation Sans", Arial, sans-serif;
   font-weight: bold;
+  font-size: 32px;
+  hyphens: auto;
+  word-break: normal;
+  overflow-wrap: break-word;
+  text-wrap: balance;
 }
-h1 { font-size: 32px; }
-h2 { font-size: 28px; }
-h3 { font-size: 24px; }
-h4 { font-size: 20px; }
-h5 { font-size: 18px; }
+h2 {
+  margin-top: 1.2em;
+  margin-bottom: 0.6em;
+  font-family: "Noto Sans", "Liberation Sans", Arial, sans-serif;
+  font-weight: bold;
+  font-size: 28px;
+  hyphens: auto;
+  word-break: normal;
+  overflow-wrap: break-word;
+  text-wrap: balance;
+}
+h3 {
+  margin-top: 1.2em;
+  margin-bottom: 0.6em;
+  font-family: "Noto Sans", "Liberation Sans", Arial, sans-serif;
+  font-weight: bold;
+  font-size: 24px;
+  hyphens: auto;
+  word-break: normal;
+  overflow-wrap: break-word;
+  text-wrap: balance;
+}
+h4 {
+  margin-top: 1.2em;
+  margin-bottom: 0.6em;
+  font-family: "Noto Sans", "Liberation Sans", Arial, sans-serif;
+  font-weight: bold;
+  font-size: 20px;
+  hyphens: auto;
+  word-break: normal;
+  overflow-wrap: break-word;
+  text-wrap: balance;
+}
+h5 {
+  margin-top: 1.2em;
+  margin-bottom: 0.6em;
+  font-family: "Noto Sans", "Liberation Sans", Arial, sans-serif;
+  font-weight: bold;
+  font-size: 18px;
+  hyphens: auto;
+  word-break: normal;
+  overflow-wrap: break-word;
+  text-wrap: balance;
+}
 h6 {
+  margin-top: 1.2em;
+  margin-bottom: 0.6em;
+  font-family: "Noto Sans", "Liberation Sans", Arial, sans-serif;
+  font-weight: bold;
   font-size: 18px;
   font-style: italic;
+  hyphens: auto;
+  word-break: normal;
+  overflow-wrap: break-word;
+  text-wrap: balance;
+}
+p {
+  hyphens: auto;
+  hyphenate-limit-chars: 6 3 3;
+  word-break: normal;
+  overflow-wrap: break-word;
 }
 hr {
   height: 4px;
@@ -310,45 +360,72 @@ hr {
   border: none;
   background-color: #000000;
 }
-li {
-  position: relative;
-  padding-left: 20px;
-}
-dt { font-weight: bold; }
-dd {
-  position: relative;
-  margin-left: 0;
-  padding-left: 20px;
-  font-style: italic;
-}
 blockquote {
   margin-left: 0;
   padding-left: 20px;
   border-left: 8px solid #f5f5f5;
+  hyphens: auto;
+  hyphenate-limit-chars: 6 3 3;
+  word-break: normal;
+  overflow-wrap: break-word;
 }
 mark {
   padding: 0 2px;
   border-radius: 4px;
   background-color: #ffff00;
+  color: #000000;
 }
 a:link { color: #0000cd; }
 a:visited { color: #9400d3; }
-a:hover, a:focus {
-  outline: none;
-  color: #000080;
-}
+a:hover { outline: none; color: #000080; }
+a:focus { outline: none; color: #000080; }
 a:active { color: #dc143c; }
+ol {
+  hyphens: auto;
+  hyphenate-limit-chars: 6 3 3;
+  word-break: normal;
+  overflow-wrap: break-word;
+}
+ul {
+  hyphens: auto;
+  hyphenate-limit-chars: 6 3 3;
+  word-break: normal;
+  overflow-wrap: break-word;
+}
+li {
+  position: relative;
+  padding-left: 20px;
+  hyphens: auto;
+  hyphenate-limit-chars: 6 3 3;
+  word-break: normal;
+  overflow-wrap: break-word;
+}
+dt {
+  font-weight: bold;
+  hyphens: auto;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+dd {
+  position: relative;
+  margin-left: 0;
+  padding-left: 20px;
+  font-style: italic;
+  hyphens: auto;
+  hyphenate-limit-chars: 6 3 3;
+  word-break: normal;
+  overflow-wrap: break-word;
+}
 code {
   padding: 2px 4px;
   border-radius: 4px;
-  font-family:
-    "Noto Sans Mono",
-    "Liberation Mono",
-    "Courier New",
-    Courier,
-    monospace;
+  font-family: "Noto Sans Mono", "Liberation Mono", "Courier New", Courier, monospace;
   font-size: 0.9em;
   line-height: 1;
+  hyphens: none !important;
+  white-space: normal;
+  word-break: break-all;
+  overflow-wrap: anywhere;
 }
 pre {
   max-width: 100%;
@@ -358,6 +435,9 @@ pre {
   background-color: #f5f5f5;
   overflow: auto;
   scrollbar-color: #000000 transparent;
+  white-space: pre-wrap;
+  word-break: break-all;
+  overflow-wrap: anywhere;
 }
 pre > code {
   display: block;
@@ -368,16 +448,15 @@ pre > code {
   line-height: 1.2;
   background-color: transparent;
   overflow: visible;
+  hyphens: none !important;
+  white-space: pre;
+  word-break: normal;
+  overflow-wrap: normal;
 }
 div.code-lang {
   display: block;
   padding: 10px 20px;
-  font-family:
-    "Noto Sans Mono",
-    "Liberation Mono",
-    "Courier New",
-    Courier,
-    monospace;
+  font-family: "Noto Sans Mono", "Liberation Mono", "Courier New", Courier, monospace;
   font-size: 0.9em;
   line-height: 1;
   background-color: #000000;
@@ -388,19 +467,16 @@ table {
   margin: 20px 0;
   border-collapse: collapse;
 }
-th, td {
-  padding: 10px 12px;
-  border: 1px solid #000000;
-}
-th { font-weight: bold; }
-thead tr {
-  background-color: #000000;
-  color: #ffffff;
-}
-tfoot tr {
-  background-color: #f5f5f5;
-  font-style: italic;
-}
+th { padding: 10px 12px; border: 1px solid #000000; font-weight: bold; }
+td { padding: 10px 12px; border: 1px solid #000000; }
+thead tr { background-color: #000000; color: #ffffff; }
+thead th { hyphens: auto; word-break: break-word; overflow-wrap: anywhere; }
+thead td { hyphens: auto; word-break: break-word; overflow-wrap: anywhere; }
+tbody th { hyphens: auto; word-break: break-word; overflow-wrap: anywhere; }
+tbody td { hyphens: auto; word-break: break-word; overflow-wrap: anywhere; }
+tfoot tr { background-color: #f5f5f5; font-style: italic; }
+tfoot th { hyphens: auto; word-break: break-word; overflow-wrap: anywhere; }
+tfoot td { hyphens: auto; word-break: break-word; overflow-wrap: anywhere; }
 figure {
   display: block;
   margin: 0;
@@ -413,81 +489,54 @@ figure img {
 figcaption {
   text-align: left;
   font-style: italic;
+  hyphens: auto;
+  hyphenate-limit-chars: 6 3 3;
+  word-break: normal;
+  overflow-wrap: break-word;
 }
-ruby { ruby-position: over; }
+ruby { ruby-position: over; ruby-align: space-around; }
 rt {
   letter-spacing: 0.05em;
   font-size: 0.55em;
   line-break: strict;
+  white-space: nowrap;
+  overflow-wrap: normal;
 }
 rp { display: none; }
 span[lang="ja"] {
-  font-family:
-    "Noto Serif CJK JP",
-    "Source Han Serif JP",
-    "源ノ明朝",
-    "Source Han Serif",
-    "Hiragino Mincho ProN",
-    "Hiragino Mincho Pro",
-    "IPAexMincho",
-    "IPAMincho",
-    "MS PMincho",
-    "MS Mincho",
-    serif;
+  font-family: "Noto Serif CJK JP", "Source Han Serif JP", "源ノ明朝", "Source Han Serif", "Hiragino Mincho ProN", "Hiragino Mincho Pro", "IPAexMincho", "IPAMincho", "MS PMincho", "MS Mincho", serif;
+  word-break: break-all;
+  line-break: normal;
 }
-span[lang="zh-CN"], span[lang="zh-Hans"] {
-  font-family:
-    "Noto Serif CJK SC",
-    "Source Han Serif SC",
-    "思源宋体",
-    "Source Han Serif CN",
-    "Source Han Serif",
-    "Songti SC",
-    "FandolSong",
-    "WenQuanYi Bitmap Song",
-    "SimSun",
-    serif;
+span[lang="zh-CN"] {
+  font-family: "Noto Serif CJK SC", "Source Han Serif SC", "思源宋体", "Source Han Serif CN", "Source Han Serif", "Songti SC", "FandolSong", "WenQuanYi Bitmap Song", "SimSun", serif;
+  word-break: break-all;
+  line-break: normal;
 }
-span[lang="zh-TW"], span[lang="zh-Hant"] {
-  font-family:
-    "Noto Serif CJK TC",
-    "Source Han Serif TC",
-    "思源宋體",
-    "Source Han Serif TW",
-    "Source Han Serif",
-    "Apple LiSung",
-    "LiSong Pro",
-    "HanaMinA",
-    "PMingLiU",
-    "MingLiU",
-    serif;
+span[lang="zh-Hans"] {
+  font-family: "Noto Serif CJK SC", "Source Han Serif SC", "思源宋体", "Source Han Serif CN", "Source Han Serif", "Songti SC", "FandolSong", "WenQuanYi Bitmap Song", "SimSun", serif;
+  word-break: break-all;
+  line-break: normal;
+}
+span[lang="zh-TW"] {
+  font-family: "Noto Serif CJK TC", "Source Han Serif TC", "思源宋體", "Source Han Serif TW", "Source Han Serif", "Apple LiSung", "LiSong Pro", "HanaMinA", "PMingLiU", "MingLiU", serif;
+  word-break: break-all;
+  line-break: normal;
+}
+span[lang="zh-Hant"] {
+  font-family: "Noto Serif CJK TC", "Source Han Serif TC", "思源宋體", "Source Han Serif TW", "Source Han Serif", "Apple LiSung", "LiSong Pro", "HanaMinA", "PMingLiU", "MingLiU", serif;
+  word-break: break-all;
+  line-break: normal;
 }
 span[lang="zh-HK"] {
-  font-family:
-    "Noto Serif CJK HK",
-    "Source Han Serif HK",
-    "思源宋體 香港",
-    "思源宋體",
-    "Source Han Serif",
-    "Apple LiSung",
-    "LiSong Pro",
-    "HanaMinA",
-    "MingLiU_HKSCS",
-    "PMingLiU",
-    "MingLiU",
-    serif;
+  font-family: "Noto Serif CJK HK", "Source Han Serif HK", "思源宋體 香港", "思源宋體", "Source Han Serif", "Apple LiSung", "LiSong Pro", "HanaMinA", "MingLiU_HKSCS", "PMingLiU", "MingLiU", serif;
+  word-break: break-all;
+  line-break: normal;
 }
 span[lang="ko"] {
-  font-family:
-    "Noto Serif CJK KR",
-    "Source Han Serif KR",
-    "본명조",
-    "Source Han Serif",
-    "AppleMyungjo",
-    "UnBatang",
-    "은바탕",
-    "Batang",
-    serif;
+  font-family: "Noto Serif CJK KR", "Source Han Serif KR", "본명조", "Source Han Serif", "AppleMyungjo", "UnBatang", "은바탕", "Batang", serif;
+  word-break: break-all;
+  line-break: normal;
 }
 ```
 ---
