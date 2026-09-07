@@ -105,6 +105,7 @@ print(html_output)
 ```
 
 This produces a `<tfoot>` section (styled in italics by the default CSS).
+
 * **Task Lists:** `- [ ] Pending item` and `- [x] Completed item`
 * **Definition Lists:**
 
@@ -399,6 +400,13 @@ li {
   hyphenate-limit-chars: 6 3 3;
   word-break: normal;
   overflow-wrap: break-word;
+}
+ul li input[type="checkbox"] {
+  margin-right: 4px;
+  vertical-align: baseline;
+  accent-color: #000000;
+  opacity: 1;
+  cursor: not-allowed;
 }
 dt {
   font-weight: bold;

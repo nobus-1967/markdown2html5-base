@@ -50,10 +50,26 @@ Unordered list:
 </ul>
 ```
 
+To-Do list:
+
+```
+* [ ] Todo...
+* [x] Done!
+```
+
+=>
+```
+<ul>
+  <li><input type="checkbox" disabled> todo</li>
+  <li><input type="checkbox" checked disabled> done</li>
+</ul>
+```
+
 Blockquote:
 ```
 > Quote
 ```
+
 =>
 ```
 <blockquote>

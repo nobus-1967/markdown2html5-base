@@ -842,6 +842,13 @@ li {
   word-break: normal;
   overflow-wrap: break-word;
 }
+ul li input[type="checkbox"] {
+  margin-right: 4px;
+  vertical-align: baseline;
+  accent-color: #000000;
+  opacity: 1;
+  cursor: not-allowed;
+}
 dt {
   font-weight: bold;
   hyphens: auto;
