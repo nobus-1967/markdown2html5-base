@@ -401,8 +401,7 @@ li {
   word-break: normal;
   overflow-wrap: break-word;
 }
-ul li input[type="checkbox"] {
-  margin-right: 4px;
+ol li input[type="checkbox"], ul li input[type="checkbox"] {
   vertical-align: baseline;
   accent-color: #000000;
   opacity: 1;

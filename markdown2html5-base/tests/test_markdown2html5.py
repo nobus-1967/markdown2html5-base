@@ -111,6 +111,14 @@ def test_task_lists(converter):
         converter.convert("- [ ] Todo")
         == '<ul>\n  <li><input type="checkbox" disabled> Todo</li>\n</ul>'
     )
+    assert (
+        converter.convert("1. [x] Done")
+        == '<ol>\n  <li><input type="checkbox" checked disabled> Done</li>\n</ol>'
+    )
+    assert (
+        converter.convert("1. [ ] Todo")
+        == '<ol>\n  <li><input type="checkbox" disabled> Todo</li>\n</ol>'
+    )
 
 
 def test_blockquotes(converter):
@@ -185,6 +193,28 @@ def test_front_matter_full_document(converter):
         "</html>"
     )
     assert converter.convert(md_text, include_css=True) == expected
+
+
+def test_front_matter_quoted_values(converter):
+    """Verify that quoted front matter values have their surrounding quotes stripped correctly."""
+    md_text = (
+        "---\ntitle: \"My Document\"\ndescription: 'A short description.'\n---\nBody"
+    )
+    expected = (
+        "<!doctype html>\n"
+        "<html>\n"
+        "  <head>\n"
+        '    <meta charset="utf-8" />\n'
+        '    <meta name="description" content="A short description." />\n'
+        "    <title>My Document</title>\n"
+        "  </head>\n"
+        "  <body>\n"
+        "<p>Body</p>\n"
+        "  </body>\n"
+        "</html>"
+    )
+    assert converter.convert(md_text) == expected
+    assert converter.convert(md_text, include_css=False) == expected
 
 
 def test_front_matter_only_lang(converter):

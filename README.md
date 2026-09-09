@@ -38,8 +38,8 @@ Ordered list:
 Unordered list:
 
 ```
-* Bird
-* Cat
+- Bird
+- Cat
 ```
 
 =>
@@ -50,18 +50,26 @@ Unordered list:
 </ul>
 ```
 
-To-Do list:
+To-Do lists:
 
 ```
-* [ ] Todo...
-* [x] Done!
+1. [ ] Todo...
+2. [x] Done!
+
+- [ ] Not complete yet...
+- [x] Complete!
 ```
 
 =>
 ```
+<ol>
+  <li><input type="checkbox" disabled> Todo&hellip;</li>
+  <li><input type="checkbox" checked disabled> Done!</li>
+</ol>
+<!-- -->
 <ul>
-  <li><input type="checkbox" disabled> todo</li>
-  <li><input type="checkbox" checked disabled> done</li>
+  <li><input type="checkbox" disabled> Not complete yet&hellip;</li>
+  <li><input type="checkbox" checked disabled> Complete!</li>
 </ul>
 ```
 

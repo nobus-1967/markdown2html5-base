@@ -168,7 +168,7 @@ class MarkdownToHTML:
                 continue
             key, _, value = line.partition(":")
             key, value = key.strip(), value.strip()
-            if len(value) >= 2 and value == value[-1] and value in "\"'":
+            if len(value) >= 2 and value[0] in "\"'" and value[-1] == value[0]:
                 value = value[1:-1]
             if key in self.FRONT_MATTER_KEYS:
                 front_matter[key] = value
@@ -650,7 +650,18 @@ class MarkdownToHTML:
                     html_lines.append(f"<ol{ol_lang}>")
                     in_ol = True
                 content = re.sub(r"^\d+\.\s+", "", stripped)
-                content = self._apply_inline_rules(content)
+                if content.startswith(("[x] ", "[X] ")):
+                    content = (
+                        '<input type="checkbox" checked disabled> '
+                        + self._apply_inline_rules(content[4:])
+                    )
+                elif content.startswith("[ ] "):
+                    content = (
+                        '<input type="checkbox" disabled> '
+                        + self._apply_inline_rules(content[4:])
+                    )
+                else:
+                    content = self._apply_inline_rules(content)
                 html_lines.append(f"  <li>{content}</li>")
                 list_just_closed = False
                 continue
@@ -842,8 +853,7 @@ li {
   word-break: normal;
   overflow-wrap: break-word;
 }
-ul li input[type="checkbox"] {
-  margin-right: 4px;
+ol li input[type="checkbox"], ul li input[type="checkbox"] {
   vertical-align: baseline;
   accent-color: #000000;
   opacity: 1;
