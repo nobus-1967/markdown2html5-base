@@ -33,7 +33,13 @@ Ordered list:
 2. Second
 ```
 
-=> `<ol><li>First</li><li>Second</li></ol>`
+=>
+```
+<ol>
+  <li>First</li>
+  <li>Second</li>
+</ol>
+```
 
 Unordered list:
 
