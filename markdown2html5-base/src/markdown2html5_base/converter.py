@@ -756,6 +756,7 @@ h2 {
   overflow-wrap: break-word;
   text-wrap: balance;
 }
+h2#toc { font-style: italic; }
 h3 {
   margin-top: 1.2em;
   margin-bottom: 0.6em;
@@ -922,7 +923,7 @@ div.code-lang {
   color: #ffffff;
   font-weight: bold;
 }
-table { margin: 20px 0; border-collapse: collapse; }
+table { margin-top: 32pt; border-collapse: collapse; }
 th { padding: 10px 12px; border: 1px solid #000000; font-weight: bold; }
 td { padding: 10px 12px; border: 1px solid #000000; }
 thead tr { background-color: #000000; color: #ffffff; }
