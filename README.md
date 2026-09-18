@@ -271,7 +271,7 @@ Any other keys are ignored, and if the file has no front matter at all, the outp
 
 ## How it works
 
-All markup elements used in this library are listed in Full Markdown Functionality Reference ([Markdown](./markdown2html5-base.md), [PDF](./markdown2html5-base.pdf)).
+All markup elements used in this library are listed in the Full Markdown Functionality Reference ([Markdown](./markdown2html5-base.md), [PDF](./markdown2html5-base.pdf)).
 
 You can evaluate the results by creating a simple Python application to convert a Markdown file to an HTML5 file:
 
