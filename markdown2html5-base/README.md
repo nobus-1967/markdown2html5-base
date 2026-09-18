@@ -82,7 +82,7 @@ print(html_output)
 * **Headings:** `# H1` ... `###### H6`
 * **Bold and Italic:** `**bold**`, `__bold__`, `*italic*`, `_italic_`
 * **Blockquotes (with paragraph support):** `> Quote text`
-* **Lists:** Unordered (`-` or `*`) and Ordered (`1.`, `2.`)
+* **Lists:** Unordered (`-` or `*`) and Ordered (`1.`, `2.`). Lists nest to any depth by indenting items with 2 (or 4) spaces or a tab; each level can alternate between bullets and numbers:
 * **Horizontal Rules:** `---`, `***`, `___` (rendered as `<hr>`)
 * **Inline Code:** `` `code` `` — HTML inside inline code is escaped automatically, so `` `<title>` `` renders as `&lt;title&gt;` and never as a real tag.
 * **Links and Images:** `[Text](url)` and `![alt](url)`. Images are wrapped in a `<figure>` element; an optional title is repeated in a `<figcaption>`: `![alt](url "Title")` → `<figure><img src="url" alt="alt" title="Title"><figcaption>Title</figcaption></figure>`.

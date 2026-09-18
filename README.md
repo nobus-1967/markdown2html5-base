@@ -34,6 +34,7 @@ Ordered list:
 ```
 
 =>
+
 ```
 <ol>
   <li>First</li>
@@ -49,6 +50,7 @@ Unordered list:
 ```
 
 =>
+
 ```
 <ul>
   <li>Bird</li>
@@ -56,7 +58,31 @@ Unordered list:
 </ul>
 ```
 
-To-Do lists:
+Nested List:
+
+```
+- Parent
+  - Child
+    1. Grandchild
+```
+
+=>
+
+```
+<ul>
+  <li>Parent
+    <ul>
+      <li>Child
+        <ol>
+          <li>Grandchild</li>
+        </ol>
+      </li>
+    </ul>
+  </li>
+</ul>
+```
+
+To-Do list:
 
 ```
 1. [ ] Todo...
@@ -67,6 +93,7 @@ To-Do lists:
 ```
 
 =>
+
 ```
 <ol>
   <li><input type="checkbox" disabled> Todo&hellip;</li>
@@ -80,11 +107,13 @@ To-Do lists:
 ```
 
 Blockquote:
+
 ```
 > Quote
 ```
 
 =>
+
 ```
 <blockquote>
   <p>Quote</p>
@@ -98,6 +127,7 @@ print('Hello')
 ```
 
 =>
+
 ```
 <pre>
   <code>print('Hello')</code>

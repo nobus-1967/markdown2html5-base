@@ -98,6 +98,29 @@ Without a language tag, the code renders plainly as `<pre><code>`.
 3. **Task:**<br />
    `- [ ] todo` => `<ul><li><input type="checkbox" disabled> todo</li></ul>`<br />
    `1. [x] done` => `<ol><li><input type="checkbox" checked disabled> done</li></ol>`
+4. **Nested:** indent an item with 2 (or 4) spaces or a tab to nest a list one level deeper. Nesting works to any depth, and each level may switch freely between bullets and numbers:
+
+```text
+- Parent
+  - Child
+    1. Grandchild
+```
+
+=> 
+
+```html
+<ul>
+  <li>Parent
+    <ul>
+      <li>Child
+        <ol>
+          <li>Grandchild</li>
+        </ol>
+      </li>
+    </ul>
+  </li>
+</ul>
+```
 
 ## 7. TOC (Table of Contents)
 

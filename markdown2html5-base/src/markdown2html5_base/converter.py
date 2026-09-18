@@ -1,7 +1,17 @@
 from __future__ import annotations
 
 import re
+from dataclasses import dataclass
 from typing import ClassVar, Pattern
+
+
+@dataclass
+class _ListFrame:
+    """State of one open <ul>/<ol> level during conversion."""
+
+    tag: str
+    indent: int
+    li_pending: bool
 
 
 class MarkdownToHTML:
@@ -58,7 +68,6 @@ class MarkdownToHTML:
     RESTORED_ESCAPES: ClassVar[dict[str, str]] = {
         "<": "&lt;",
         ">": "&gt;",
-        "|": "|",
     }
 
     INLINE_RULES: ClassVar[list[tuple[Pattern[str], str]]] = [
@@ -220,6 +229,37 @@ class MarkdownToHTML:
         """Convert unsafe special characters to secure HTML entity representations."""
         return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
+    @staticmethod
+    def _list_item_tag(stripped: str) -> str | None:
+        """Return "ul" or "ol" if the line starts a list item, otherwise None."""
+        if stripped.startswith(("* ", "- ")):
+            return "ul"
+        if re.match(r"^\d+\.\s+", stripped):
+            return "ol"
+        return None
+
+    @staticmethod
+    def _line_indent(line: str) -> int:
+        """Return the leading whitespace width of a line."""
+        return len(line) - len(line.lstrip())
+
+    def _list_item_content(self, tag: str, stripped: str) -> str:
+        """Return the processed inline content, including checkbox inputs, for a list item."""
+        if tag == "ul":
+            content = stripped[2:]
+        else:
+            content = re.sub(r"^\d+\.\s+", "", stripped)
+        if content.startswith(("[x] ", "[X] ")):
+            return (
+                '<input type="checkbox" checked disabled> '
+                + self._apply_inline_rules(content[4:])
+            )
+        if content.startswith("[ ] "):
+            return '<input type="checkbox" disabled> ' + self._apply_inline_rules(
+                content[4:]
+            )
+        return self._apply_inline_rules(content)
+
     def _render_code_block(self, content: str, lang: str = "") -> str:
         """Render escaped code content inside pre-code containers with a language label."""
         escaped = self._escape_html(content)
@@ -233,13 +273,6 @@ class MarkdownToHTML:
             return content
         return f"<p{self._lang_attr(lang)}>{content}</p>"
 
-    def _wrap_paragraph(self, buffer_lines: list[str]) -> str:
-        """Wrap active block buffer strings inside an anonymous HTML paragraph tag context."""
-        content = self._process_paragraph_breaks(buffer_lines)
-        if self._is_figure_block(content):
-            return content
-        return f"<p>{content}</p>"
-
     @staticmethod
     def _is_figure_block(content: str) -> bool:
         """Verify whether the analyzed string forms a standalone figure component boundary."""
@@ -247,17 +280,17 @@ class MarkdownToHTML:
         return stripped.startswith("<figure>") and stripped.endswith("</figure>")
 
     def _apply_footnote_refs(self, text: str) -> str:
-        """Substitute markdown pattern footnote markers with operational anchor components."""
+        """Replace footnote markers with their HTML anchor links."""
         return self.FOOTNOTE_REF_RE.sub(self.FOOTNOTE_REF_HTML, text)
 
     def _replace_escapes(self, text: str) -> str:
-        """Swap explicit escape sequence syntax declarations with intermediate placeholders."""
+        """Swap escaped characters for internal placeholder tokens."""
         for char, placeholder in self.ESCAPE_CHARS.items():
             text = text.replace(f"\\{char}", placeholder)
         return text
 
     def _restore_escapes(self, text: str) -> str:
-        """Revert internal tokens back to safe text characters or target replacements."""
+        """Restore placeholder tokens to their target characters."""
         for char, placeholder in self.ESCAPE_CHARS.items():
             clean_char = self.RESTORED_ESCAPES.get(char, char)
             text = text.replace(placeholder, clean_char)
@@ -288,31 +321,22 @@ class MarkdownToHTML:
                 clean_lines.append(line)
         return "\n".join(clean_lines), footnotes
 
-    def _close_containers(
-        self, lines: list[str], ul: bool = False, ol: bool = False
-    ) -> None:
-        """Append container closing elements to the current HTML lines stack context."""
-        if ul:
-            lines.append("</ul>")
-        if ol:
-            lines.append("</ol>")
-
     def _close_quote(
         self, html_lines: list[str], quote_buffer: list[str], lang: str = ""
     ) -> None:
-        """Flush and compile the active blockquote list data inside container tags."""
+        """Close an open blockquote, wrapping its buffered lines in paragraphs."""
         lang_attr = self._lang_attr(lang)
         html_lines.append(f"<blockquote{lang_attr}>")
         subs, curr = [], []
         for item in quote_buffer:
             if item.strip() == "":
                 if curr:
-                    subs.append(f"  {self._wrap_paragraph(curr)}")
+                    subs.append(f"  {self._render_paragraph(curr)}")
                     curr.clear()
             else:
                 curr.append(item)
         if curr:
-            subs.append(f"  {self._wrap_paragraph(curr)}")
+            subs.append(f"  {self._render_paragraph(curr)}")
         html_lines.extend(subs)
         html_lines.append("</blockquote>")
 
@@ -326,7 +350,7 @@ class MarkdownToHTML:
         q_lang: str = "",
         t_lang: str = "",
     ) -> None:
-        """Clear all active structural compilation buffers and write output to stacks."""
+        """Flush pending paragraph, quote, and table buffers to the HTML output."""
         if p_buf:
             html.append(self._render_paragraph(p_buf, p_lang))
             p_buf.clear()
@@ -395,7 +419,7 @@ class MarkdownToHTML:
         return "\n".join(html)
 
     def _process_paragraph_breaks(self, buffer_lines: list[str]) -> str:
-        """Evaluate trailing line breaks and format paragraph internals into lines."""
+        """Convert trailing breaks into <br /> and apply inline rules per line."""
         processed: list[str] = []
         for line in buffer_lines:
             has_break = line.endswith(("  ", "\\"))
@@ -480,7 +504,7 @@ class MarkdownToHTML:
         lines = text.split("\n")
         html_lines: list[str] = []
 
-        in_ul = in_ol = in_blockquote = False
+        in_blockquote = False
         in_code_block = in_table = in_def_list = False
 
         paragraph_buffer: list[str] = []
@@ -490,6 +514,8 @@ class MarkdownToHTML:
 
         paragraph_lang = quote_lang = table_lang = code_lang = ""
         list_just_closed = False
+
+        list_stack: list[_ListFrame] = []
 
         def flush_pending() -> None:
             """Flush all open structural buffers into the HTML output and reset languages."""
@@ -505,7 +531,72 @@ class MarkdownToHTML:
             )
             paragraph_lang = quote_lang = table_lang = ""
 
-        for line in lines:
+        def item_pad(depth: int) -> str:
+            """Return the indentation for an <li> element at the given depth."""
+            return "  " * (2 * depth - 1)
+
+        def list_pad(depth: int) -> str:
+            """Return the indentation for a <ul>/<ol> element at the given depth."""
+            return "  " * (2 * (depth - 1))
+
+        def close_pending_li_at(depth: int) -> None:
+            """Close the deferred <li> of the list at the given 1-based depth."""
+            frame = list_stack[depth - 1]
+            if frame.li_pending:
+                html_lines.append(f"{item_pad(depth)}</li>")
+                frame.li_pending = False
+
+        def pop_level() -> None:
+            """Close the deepest open list, including any deferred <li>."""
+            depth = len(list_stack)
+            frame = list_stack[-1]
+            if frame.li_pending:
+                html_lines.append(f"{item_pad(depth)}</li>")
+            html_lines.append(f"{list_pad(depth)}</{frame.tag}>")
+            list_stack.pop()
+
+        def close_all_lists() -> None:
+            """Close every open list level."""
+            while list_stack:
+                pop_level()
+
+        def open_level(tag: str, indent: int) -> None:
+            """Open a new <ul>/<ol> at a fresh depth."""
+            depth = len(list_stack) + 1
+            html_lines.append(f"{list_pad(depth)}<{tag}{self._lang_attr(block_lang)}>")
+            list_stack.append(_ListFrame(tag, indent, False))
+
+        def switch_level_tag(tag: str) -> None:
+            """Replace the tag of the current list (type switch is not indented)."""
+            depth = len(list_stack)
+            frame = list_stack[-1]
+            close_pending_li_at(depth)
+            html_lines.append(f"{list_pad(depth)}</{frame.tag}>")
+            lang_attr = self._lang_attr(block_lang) if depth == 1 else ""
+            html_lines.append(f"{list_pad(depth)}<{tag}{lang_attr}>")
+            list_stack[-1] = _ListFrame(tag, frame.indent, False)
+
+        def ensure_open_list(tag: str, item_indent: int) -> None:
+            """Adjust open lists so the top of the stack matches the item."""
+            while list_stack and list_stack[-1].indent > item_indent:
+                pop_level()
+            if not list_stack or list_stack[-1].indent < item_indent:
+                open_level(tag, item_indent)
+            elif list_stack[-1].tag != tag:
+                switch_level_tag(tag)
+
+        def has_nested_children(line_index: int, own_indent: int) -> bool:
+            """Return True if the next non-blank list line is more deeply indented."""
+            for j in range(line_index + 1, len(lines)):
+                nxt_stripped = lines[j].strip()
+                if not nxt_stripped:
+                    continue
+                if self._list_item_tag(nxt_stripped) is None:
+                    return False
+                return self._line_indent(lines[j]) > own_indent
+            return False
+
+        for line_index, line in enumerate(lines):
             stripped = line.strip()
 
             if stripped.startswith("```"):
@@ -538,8 +629,7 @@ class MarkdownToHTML:
                 html_lines.append(f"<!--{comment_match.group(1)}-->")
                 continue
 
-            is_ul_item = stripped.startswith(("* ", "- "))
-            is_ol_item = bool(re.match(r"^\d+\.\s+", stripped))
+            list_item_tag = self._list_item_tag(stripped)
             is_quote_item = stripped.startswith(">")
             is_table_row = stripped.startswith("|") and stripped.endswith("|")
             is_def_desc = stripped.startswith(": ")
@@ -549,8 +639,7 @@ class MarkdownToHTML:
             is_static_block = bool(heading_match or is_hr)
 
             if (
-                is_ul_item
-                or is_ol_item
+                list_item_tag is not None
                 or is_quote_item
                 or is_static_block
                 or is_table_row
@@ -616,60 +705,25 @@ class MarkdownToHTML:
                 html_lines.append("</dl>")
                 in_def_list = False
 
-            if is_ul_item:
-                if not in_ul:
-                    self._close_containers(html_lines, ol=in_ol)
-                    in_ol = False
-                    ul_lang = self._lang_attr(block_lang)
-                    html_lines.append(f"<ul{ul_lang}>")
-                    in_ul = True
+            if list_item_tag is not None:
+                content = self._list_item_content(list_item_tag, stripped)
+                item_indent = self._line_indent(line)
 
-                content = stripped[2:]
-                if content.startswith(("[x] ", "[X] ")):
-                    content = (
-                        '<input type="checkbox" checked disabled> '
-                        + self._apply_inline_rules(content[4:])
-                    )
-                elif content.startswith("[ ] "):
-                    content = (
-                        '<input type="checkbox" disabled> '
-                        + self._apply_inline_rules(content[4:])
-                    )
+                ensure_open_list(list_item_tag, item_indent)
+                depth = len(list_stack)
+                close_pending_li_at(depth)
+
+                if has_nested_children(line_index, item_indent):
+                    html_lines.append(f"{item_pad(depth)}<li>{content}")
+                    list_stack[-1].li_pending = True
                 else:
-                    content = self._apply_inline_rules(content)
-
-                html_lines.append(f"  <li>{content}</li>")
+                    html_lines.append(f"{item_pad(depth)}<li>{content}</li>")
                 list_just_closed = False
                 continue
 
-            if is_ol_item:
-                if not in_ol:
-                    self._close_containers(html_lines, ul=in_ul)
-                    in_ul = False
-                    ol_lang = self._lang_attr(block_lang)
-                    html_lines.append(f"<ol{ol_lang}>")
-                    in_ol = True
-                content = re.sub(r"^\d+\.\s+", "", stripped)
-                if content.startswith(("[x] ", "[X] ")):
-                    content = (
-                        '<input type="checkbox" checked disabled> '
-                        + self._apply_inline_rules(content[4:])
-                    )
-                elif content.startswith("[ ] "):
-                    content = (
-                        '<input type="checkbox" disabled> '
-                        + self._apply_inline_rules(content[4:])
-                    )
-                else:
-                    content = self._apply_inline_rules(content)
-                html_lines.append(f"  <li>{content}</li>")
-                list_just_closed = False
-                continue
-
-            if in_ul or in_ol:
-                self._close_containers(html_lines, ul=in_ul, ol=in_ol)
+            if list_stack:
+                close_all_lists()
                 list_just_closed = True
-                in_ul = in_ol = False
 
             if is_quote_item:
                 if not in_blockquote:
@@ -713,7 +767,7 @@ class MarkdownToHTML:
             paragraph_buffer.append(line)
 
         flush_pending()
-        self._close_containers(html_lines, ul=in_ul, ol=in_ol)
+        close_all_lists()
         if in_def_list:
             html_lines.append("</dl>")
 

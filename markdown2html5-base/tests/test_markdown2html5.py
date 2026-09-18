@@ -121,6 +121,139 @@ def test_task_lists(converter):
     )
 
 
+def test_nested_list_same_type(converter):
+    """Verify that an indented bullet list nests inside the parent <li>."""
+    assert (
+        converter.convert("- Item 1\n- Item 2\n  - Subitem 1\n  - Subitem 2\n- Item 3")
+        == "<ul>\n"
+        "  <li>Item 1</li>\n"
+        "  <li>Item 2\n"
+        "    <ul>\n"
+        "      <li>Subitem 1</li>\n"
+        "      <li>Subitem 2</li>\n"
+        "    </ul>\n"
+        "  </li>\n"
+        "  <li>Item 3</li>\n"
+        "</ul>"
+    )
+
+
+def test_nested_list_different_type(converter):
+    """Verify that an indented ordered list nests inside a bullet parent."""
+    assert (
+        converter.convert(
+            "- Item 1\n- Item 2\n  1. Subitem 1\n  2. Subitem 2\n- Item 3"
+        )
+        == "<ul>\n"
+        "  <li>Item 1</li>\n"
+        "  <li>Item 2\n"
+        "    <ol>\n"
+        "      <li>Subitem 1</li>\n"
+        "      <li>Subitem 2</li>\n"
+        "    </ol>\n"
+        "  </li>\n"
+        "  <li>Item 3</li>\n"
+        "</ul>"
+    )
+
+
+def test_nested_list_mixed_types(converter):
+    """Verify that alternating nested types render as sibling nested lists."""
+    assert (
+        converter.convert(
+            "- Item 1\n- Item 2\n  1. Subitem 1\n  2. Subitem 2\n  - Subitem 3\n- Item 3"
+        )
+        == "<ul>\n"
+        "  <li>Item 1</li>\n"
+        "  <li>Item 2\n"
+        "    <ol>\n"
+        "      <li>Subitem 1</li>\n"
+        "      <li>Subitem 2</li>\n"
+        "    </ol>\n"
+        "    <ul>\n"
+        "      <li>Subitem 3</li>\n"
+        "    </ul>\n"
+        "  </li>\n"
+        "  <li>Item 3</li>\n"
+        "</ul>"
+    )
+
+
+def test_nested_list_checkboxes(converter):
+    """Verify that indented checklist items keep their checkbox inputs."""
+    assert (
+        converter.convert("- Task A\n- Task B\n  - [x] Done\n  - [ ] Todo\n- Task C")
+        == "<ul>\n"
+        "  <li>Task A</li>\n"
+        "  <li>Task B\n"
+        "    <ul>\n"
+        '      <li><input type="checkbox" checked disabled> Done</li>\n'
+        '      <li><input type="checkbox" disabled> Todo</li>\n'
+        "    </ul>\n"
+        "  </li>\n"
+        "  <li>Task C</li>\n"
+        "</ul>"
+    )
+
+
+def test_triple_nested_list(converter):
+    """Verify that a third indentation level nests a list inside a second-level <li>."""
+    assert (
+        converter.convert(
+            "- Item 1\n"
+            "- Item 2\n"
+            "  - Sub 1\n"
+            "    - Subsub 1\n"
+            "    - Subsub 2\n"
+            "  - Sub 2\n"
+            "- Item 3"
+        )
+        == "<ul>\n"
+        "  <li>Item 1</li>\n"
+        "  <li>Item 2\n"
+        "    <ul>\n"
+        "      <li>Sub 1\n"
+        "        <ul>\n"
+        "          <li>Subsub 1</li>\n"
+        "          <li>Subsub 2</li>\n"
+        "        </ul>\n"
+        "      </li>\n"
+        "      <li>Sub 2</li>\n"
+        "    </ul>\n"
+        "  </li>\n"
+        "  <li>Item 3</li>\n"
+        "</ul>"
+    )
+
+
+def test_triple_nested_list_with_type_switch(converter):
+    """Verify that a deep nested list may switch type at any depth."""
+    assert (
+        converter.convert(
+            "- Item 1\n"
+            "- Item 2\n"
+            "  1. Sub 1\n"
+            "    - Subsub 1\n"
+            "  2. Sub 2\n"
+            "- Item 3"
+        )
+        == "<ul>\n"
+        "  <li>Item 1</li>\n"
+        "  <li>Item 2\n"
+        "    <ol>\n"
+        "      <li>Sub 1\n"
+        "        <ul>\n"
+        "          <li>Subsub 1</li>\n"
+        "        </ul>\n"
+        "      </li>\n"
+        "      <li>Sub 2</li>\n"
+        "    </ol>\n"
+        "  </li>\n"
+        "  <li>Item 3</li>\n"
+        "</ul>"
+    )
+
+
 def test_blockquotes(converter):
     """Verify that quote syntax structures bundle multi-line sequences inside blockquote wrappers."""
     md_quote = "> First para.\n>\n> Second para."
