@@ -241,7 +241,7 @@ Any other keys are ignored, and if the file has no front matter at all, the outp
 
 ## How it works
 
-All markup elements used in this library are listed in [Full Markdown Functionality Reference](./markdown2html5-base.pdf)
+All markup elements used in this library are listed in Full Markdown Functionality Reference ([Markdown](./markdown2html5-base.md), [PDF](./markdown2html5-base.pdf)).
 
 You can evaluate the results by creating a simple Python application to convert a Markdown file to an HTML5 file:
 
@@ -271,6 +271,8 @@ if __name__ == "__main__":
     main()
 ```
 You can also use [markdown2pdf-base](https://github.com/nobus-1967/markdown2pdf-base) to convert a Markdown file to a PDF file.
+
+Both `markdown2html5-base` and `markdown2pdf-base` were created for use with [Mark Editor](https://github.com/nobus-1967/mark_editor), but they can be used as separate tools.
 
 ## Acknowledgements
 
