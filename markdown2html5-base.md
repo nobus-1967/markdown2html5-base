@@ -68,13 +68,18 @@ Custom ID: `## Section {#sec1}` => `<h2 id="sec1">Section</h2>`
 | `^superscript^`     | `<sup>superscript</sup>`                |
 | `` `code` ``        | `<code>code</code>`                     |
 
+As in CommonMark, an underscore does not open or close emphasis inside a word, so identifiers keep their underscores: `snake_case_name` → `snake_case_name`, not `snake<em>case</em>name`. Use `*` for emphasis, or escape the underscores (`snake\_case\_name`), when the underscores must remain visible.
+
 ## 3. Links and Images
 
 | Markdown              | Output HTML                                                                              |
 | --------------------- | ---------------------------------------------------------------------------------------- |
 | `[text](url)`         | `<a href="url">text</a>`                                                                 |
+| `[text](url "Title")` | `<a href="url" title="Title">text</a>`                                                    |
 | `![alt](src)`         | `<figure><img src="src" alt="alt"></figure>`                                             |
 | `![alt](src "Title")` | `<figure><img src="src" alt="alt" title="Title"><figcaption>Title</figcaption></figure>` |
+
+A link destination is taken verbatim and is never processed for emphasis or typography, so `[link_text](target_x)` renders as `<a href="target_x">link_text</a>`. Balanced parentheses are kept (`[text](http://e.com/a_(b))`), and a destination containing spaces can be wrapped in angle brackets (`[text](<http://e.com/a b>)`).
 
 ## 4. Fenced Code Blocks
 
@@ -232,6 +237,8 @@ Term
 Reference: `[^1]` => `<sup id="fnref:1"><a href="#fn:1" class="footnote-ref">1</a></sup>`
 
 Definition: `[^1]: Text` at bottom => rendered in `<div class="footnotes"><ol>...</ol></div>`
+
+Identifiers may contain letters, digits, underscores and dashes, e.g. `[^see_note_1]`.
 
 ## 12. Language Markers
 

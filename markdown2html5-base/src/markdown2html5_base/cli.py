@@ -1,3 +1,5 @@
+"""Command-line interface converting a Markdown file into an HTML5 document."""
+
 import argparse
 import sys
 

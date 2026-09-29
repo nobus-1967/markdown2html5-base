@@ -1,3 +1,10 @@
+"""Convert Markdown documents into clean, modern HTML5 markup.
+
+The converter walks the source line by line, resolving block structures
+(front matter, headings, lists, tables, blockquotes, footnotes) and then
+applies the inline rules to the text of each block.
+"""
+
 from __future__ import annotations
 
 import re
@@ -70,20 +77,30 @@ class MarkdownToHTML:
         ">": "&gt;",
     }
 
+    # The `_` rules use CommonMark's intraword rule: an underscore only opens
+    # emphasis when it is not glued to a word on its left, and only closes it
+    # when it is not glued to a word on its right.  That keeps identifiers such
+    # as `snake_case_name` and URLs such as `a_b_c` intact, while `_italic_`
+    # still works.  `*` emphasis is left unrestricted, as in CommonMark.
     INLINE_RULES: ClassVar[list[tuple[Pattern[str], str]]] = [
         (re.compile(r"\*\*\*(.*?)\*\*\*"), r"<strong><em>\1</em></strong>"),
-        (re.compile(r"___(.*?)___"), r"<strong><em>\1</em></strong>"),
+        (
+            re.compile(r"(?<![\w\\])___(?=\S)(.+?)(?<=\S)___(?!\w)"),
+            r"<strong><em>\1</em></strong>",
+        ),
         (re.compile(r"\*\*(.*?)\*\*"), r"<strong>\1</strong>"),
-        (re.compile(r"__(.*?)__"), r"<strong>\1</strong>"),
+        (
+            re.compile(r"(?<![\w\\])__(?=\S)(.+?)(?<=\S)__(?!\w)"),
+            r"<strong>\1</strong>",
+        ),
         (re.compile(r"\*(.*?)\*"), r"<em>\1</em>"),
-        (re.compile(r"_(.*?)_"), r"<em>\1</em>"),
+        (re.compile(r"(?<![\w\\])_(?=\S)(.+?)(?<=\S)_(?!\w)"), r"<em>\1</em>"),
         (re.compile(r"~~(.*?)~~"), r"<s>\1</s>"),
         (re.compile(r"==(.*?)=="), r"<mark>\1</mark>"),
         (re.compile(r"\~(.*?)\~"), r"<sub>\1</sub>"),
         (re.compile(r"\^\^\^(.*?)\^\^\^"), r"<u><em>\1</em></u>"),
         (re.compile(r"\^\^(.*?)\^\^"), r"<u>\1</u>"),
         (re.compile(r"\^(.*?)\^"), r"<sup>\1</sup>"),
-        (re.compile(r"\[(.*?)\]\((.*?)\)"), r'<a href="\2">\1</a>'),
     ]
 
     TYPOGRAPHY_RULES: ClassVar[list[tuple[Pattern[str], str]]] = [
@@ -120,7 +137,7 @@ class MarkdownToHTML:
         (re.compile(r"&nbsp;"), "&nbsp;"),
     ]
 
-    FOOTNOTE_REF_RE: ClassVar[Pattern[str]] = re.compile(r"\[\^([a-zA-Z0-9]+)\]")
+    FOOTNOTE_REF_RE: ClassVar[Pattern[str]] = re.compile(r"\[\^([^\]\s]+)\]")
     FOOTNOTE_REF_HTML: ClassVar[str] = (
         r'<sup id="fnref:\1"><a href="#fn:\1" class="footnote-ref">\1</a></sup>'
     )
@@ -140,9 +157,7 @@ class MarkdownToHTML:
     HR_RE: ClassVar[Pattern[str]] = re.compile(r"^(?:-{3,}|\*{3,}|_{3,})$")
     RUBY_RE: ClassVar[Pattern[str]] = re.compile(r"\{([^{}:|]+)\|([^}]+)\}")
     PROTECT_CODE_RE: ClassVar[Pattern[str]] = re.compile(r"`([^`\n]+)`")
-    FOOTNOTE_DEF_RE: ClassVar[Pattern[str]] = re.compile(
-        r"^\[\^([a-zA-Z0-9]+)\]:\s+(.*?)$"
-    )
+    FOOTNOTE_DEF_RE: ClassVar[Pattern[str]] = re.compile(r"^\[\^([^\]\s]+)\]:\s+(.*?)$")
 
     FRONT_MATTER_KEYS: ClassVar[set[str]] = {
         "lang",
@@ -282,6 +297,119 @@ class MarkdownToHTML:
     def _apply_footnote_refs(self, text: str) -> str:
         """Replace footnote markers with their HTML anchor links."""
         return self.FOOTNOTE_REF_RE.sub(self.FOOTNOTE_REF_HTML, text)
+
+    @staticmethod
+    def _find_label_end(text: str, start: int) -> int | None:
+        """Locate the ``]`` closing the link label that opens at ``start``.
+
+        Nested ``[...]`` groups are balanced, so a label such as
+        ``text [with] brackets`` is matched as a whole.  ``None`` is returned
+        when the label is unterminated, spans a line break, or is not followed
+        by the opening parenthesis of a destination.
+        """
+        depth = 0
+        for index in range(start, len(text)):
+            char = text[index]
+            if char == "\n":
+                return None
+            if char == "[":
+                depth += 1
+            elif char == "]":
+                depth -= 1
+                if not depth:
+                    return index if text[index + 1 : index + 2] == "(" else None
+        return None
+
+    @staticmethod
+    def _parse_link_dest(text: str, start: int) -> tuple[str, str, int] | None:
+        """Parse the ``url "title")`` part that follows a link label.
+
+        Returns the destination, the optional title and the index just after
+        the closing parenthesis, or ``None`` when the destination is
+        malformed.  Balanced parentheses are kept inside the destination and
+        destinations may be wrapped in angle brackets.
+        """
+        size = len(text)
+        index = start
+        if text[index : index + 1] == "<":
+            closing = text.find(">", index + 1)
+            if closing == -1:
+                return None
+            url = text[index + 1 : closing]
+            index = closing + 1
+        else:
+            begin = index
+            depth = 0
+            while index < size:
+                char = text[index]
+                if char.isspace():
+                    break
+                if char == "(":
+                    depth += 1
+                elif char == ")":
+                    if not depth:
+                        break
+                    depth -= 1
+                index += 1
+            url = text[begin:index]
+        title = ""
+        cursor = index
+        while cursor < size and text[cursor].isspace():
+            cursor += 1
+        if text[cursor : cursor + 1] in ('"', "'", "("):
+            closer = ")" if text[cursor] == "(" else text[cursor]
+            title_end = text.find(closer, cursor + 1)
+            if title_end == -1:
+                return None
+            title = text[cursor + 1 : title_end]
+            index = title_end + 1
+            while index < size and text[index].isspace():
+                index += 1
+        if text[index : index + 1] != ")":
+            return None
+        return url, title, index + 1
+
+    def _protect_links(
+        self, text: str, links: dict[str, str], allow_links: bool = True
+    ) -> str:
+        """Replace ``[label](url "title")`` links with placeholder tokens.
+
+        Destinations are recorded verbatim and restored after every other
+        inline rule has run, so underscores, asterisks and quotes inside a URL
+        can no longer be mistaken for emphasis or typography.  Labels are
+        processed recursively, and links inside a label are left as literal
+        text because nested anchors are not valid HTML.
+        """
+        if not allow_links:
+            return text
+        chunks: list[str] = []
+        index = 0
+        while index < len(text):
+            start = text.find("[", index)
+            if start == -1:
+                chunks.append(text[index:])
+                break
+            chunks.append(text[index:start])
+            index = start + 1
+            label_end = self._find_label_end(text, start)
+            if label_end is None:
+                chunks.append("[")
+                continue
+            parsed = self._parse_link_dest(text, label_end + 2)
+            if parsed is None:
+                chunks.append(text[start : label_end + 1])
+                index = label_end + 1
+                continue
+            url, title, index = parsed
+            key = f"\x00LINK{len(links)}\x00"
+            label = self._apply_inline_rules(
+                text[start + 1 : label_end], allow_links=False
+            )
+            title_attr = f' title="{title}"' if title else ""
+            safe_url = url.replace('"', "&quot;")
+            links[key] = f'<a href="{safe_url}"{title_attr}>{label}</a>'
+            chunks.append(key)
+        return "".join(chunks)
 
     def _replace_escapes(self, text: str) -> str:
         """Swap escaped characters for internal placeholder tokens."""
@@ -435,8 +563,15 @@ class MarkdownToHTML:
             processed.append(inline)
         return "\n".join(processed)
 
-    def _apply_inline_rules(self, text: str) -> str:
-        """Resolve typographic translations, emojis, inline tags, spans, and tokens."""
+    def _apply_inline_rules(self, text: str, allow_links: bool = True) -> str:
+        """Resolve typographic translations, emojis, inline tags, spans, and tokens.
+
+        Code spans, images, links and footnote markers are shielded with
+        placeholder tokens first, so their contents are never touched by the
+        emphasis, typography or emoji rules, and are restored at the end.
+        ``allow_links`` is disabled while recursing into a link label, since
+        links cannot be nested.
+        """
         code_spans: dict[str, str] = {}
 
         def protect_code(match: re.Match[str]) -> str:
@@ -465,6 +600,17 @@ class MarkdownToHTML:
             return key
 
         text = self.IMAGE_RE.sub(protect_image, text)
+        links: dict[str, str] = {}
+        text = self._protect_links(text, links, allow_links)
+        footnote_refs: dict[str, str] = {}
+
+        def protect_footnote_ref(match: re.Match[str]) -> str:
+            """Replace a footnote marker with a placeholder token."""
+            key = f"\x00FNREF{len(footnote_refs)}\x00"
+            footnote_refs[key] = self._apply_footnote_refs(match.group(0))
+            return key
+
+        text = self.FOOTNOTE_REF_RE.sub(protect_footnote_ref, text)
 
         def match_emoji(match: re.Match[str]) -> str:
             """Return the emoji for a shortcode, or the original token if unknown."""
@@ -481,14 +627,22 @@ class MarkdownToHTML:
             text = pattern.sub(replacement, text)
 
         text = self.INLINE_LANG_RE.sub(r'<span lang="\1">\2</span>', text)
-        text = self._apply_footnote_refs(text)
+
+        # Restore in reverse order of protection: a link label may contain a
+        # code span or image token, so those placeholders must already exist in
+        # the final text by the time the link HTML itself is put back.
+        for key, tag in footnote_refs.items():
+            text = text.replace(key, tag)
+
+        for key, tag in links.items():
+            text = text.replace(key, tag)
+
+        for key, tag in img_tags.items():
+            text = text.replace(key, tag)
 
         for key, content in code_spans.items():
             escaped = self._escape_html(content)
             text = text.replace(key, f"<code>{escaped}</code>")
-
-        for key, tag in img_tags.items():
-            text = text.replace(key, tag)
 
         return text
 

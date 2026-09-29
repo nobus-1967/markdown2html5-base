@@ -80,12 +80,12 @@ print(html_output)
 ### 1. Basic Syntax
 
 * **Headings:** `# H1` ... `###### H6`
-* **Bold and Italic:** `**bold**`, `__bold__`, `*italic*`, `_italic_`
+* **Bold and Italic:** `**bold**`, `__bold__`, `*italic*`, `_italic_`. As in CommonMark, `_` does not create emphasis *inside* a word, so identifiers like `snake_case_name` and `a_b_c` are left alone. To italicise a word that contains underscores, wrap it in `*` or escape them (`snake\_case\_name`).
 * **Blockquotes (with paragraph support):** `> Quote text`
 * **Lists:** Unordered (`-` or `*`) and Ordered (`1.`, `2.`). Lists nest to any depth by indenting items with 2 (or 4) spaces or a tab; each level can alternate between bullets and numbers:
 * **Horizontal Rules:** `---`, `***`, `___` (rendered as `<hr>`)
 * **Inline Code:** `` `code` `` — HTML inside inline code is escaped automatically, so `` `<title>` `` renders as `&lt;title&gt;` and never as a real tag.
-* **Links and Images:** `[Text](url)` and `![alt](url)`. Images are wrapped in a `<figure>` element; an optional title is repeated in a `<figcaption>`: `![alt](url "Title")` → `<figure><img src="url" alt="alt" title="Title"><figcaption>Title</figcaption></figure>`.
+* **Links and Images:** `[Text](url)` and `![alt](url)`. A link may also carry a title — `[Text](url "Title")` → `<a href="url" title="Title">Text</a>`. The destination is taken verbatim: underscores, asterisks and quotes inside it are never treated as emphasis or typography, balanced parentheses are kept (`[T](http://e.com/a_(b))`), and a destination with spaces can be wrapped in angle brackets (`[T](<http://e.com/a b>)`). Images are wrapped in a `<figure>` element; an optional title is repeated in a `<figcaption>`: `![alt](url "Title")` → `<figure><img src="url" alt="alt" title="Title"><figcaption>Title</figcaption></figure>`.
 
 ### 2. Extended Syntax
 
@@ -114,7 +114,7 @@ Term
 : Definition of the term
 ```
 * **Headings with custom IDs:** `## Custom Heading Title {#custom-id}`
-* **Footnotes:** Insert markers `[^1]` anywhere and define their values globally via `[^1]: Footnote body text.`
+* **Footnotes:** Insert markers `[^1]` anywhere and define their values globally via `[^1]: Footnote body text.` Identifiers may contain letters, digits, underscores and dashes, e.g. `[^see_note_1]`.
 * **Text Markers:** Strikethrough `~~text~~`, text highlight `==marker==`, underline `^^text^^`, subscript `H~2~O`, and superscript `X^2^`
 * **Hidden Comments:** `[comment text]: #` renders as an invisible HTML comment `<!--comment text-->`
 * **Emoji shortcodes:** `:joy:` → `😂`, `:heart:` → `❤️`, `:fire:` → `🔥`, and more — see the full table in [Emoji Shortcodes](#8-emoji-shortcodes).

@@ -10,6 +10,8 @@ Bold: `**bold**` => `<strong>bold</strong>`
 
 Italic: `*italic*` => `<em>italic</em>`
 
+As in CommonMark, an underscore does not open or close emphasis inside a word, so `snake_case_name` stays literal rather than becoming `snake<em>case</em>name`
+
 Underline: `^^underlined^^` => `<u>underlined</u>`
 
 Strikethrough: `~~deleted~~` => `<s>deleted</s>`
@@ -23,6 +25,10 @@ Superscript: `X^2^` => `<sup>2</sup>` (applied inline as X<sup>2</sup>)
 Subscript: `H~2~O` => `<sub>2</sub>` (applied inline as H<sub>2</sub>O)
 
 Link: `[text](url)` => `<a href="url">text</a>`
+
+Link with title: `[text](url "Title")` => `<a href="url" title="Title">text</a>`
+
+The link destination is taken verbatim, so underscores and asterisks inside a URL stay literal: `[link_text](target_x)` => `<a href="target_x">link_text</a>`
 
 Image: `![Alt](img.png "Title")` => `<figure><img src="url" alt="alt" title="Title"><figcaption>Title</figcaption></figure>`
 

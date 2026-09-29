@@ -1,3 +1,5 @@
+"""End-to-end tests for the Markdown to HTML5 conversion rules."""
+
 import pytest
 
 from markdown2html5_base.converter import MarkdownToHTML
@@ -76,6 +78,110 @@ def test_images(converter):
         "  <figcaption>Title</figcaption>\n"
         "</figure>"
     )
+
+
+def test_links_keep_underscores_verbatim(converter):
+    """Verify that underscores inside link text and destinations stay literal.
+
+    The emphasis pass must never consume the `_` characters of a URL such as
+    `target_x`, which previously produced a `</em>` inside the `href`.
+    """
+    assert converter.convert("[link_text](target_x)") == (
+        '<p><a href="target_x">link_text</a></p>'
+    )
+    assert converter.convert("[ext](http://e.com/a_b_c)") == (
+        '<p><a href="http://e.com/a_b_c">ext</a></p>'
+    )
+    assert converter.convert("[one](a_b) [two](c_d)") == (
+        '<p><a href="a_b">one</a> <a href="c_d">two</a></p>'
+    )
+    assert converter.convert("[Jump](#sec_one)") == (
+        '<p><a href="#sec_one">Jump</a></p>'
+    )
+
+
+def test_links_keep_asterisks_verbatim(converter):
+    """Verify that asterisks in a link destination are not treated as emphasis markers."""
+    assert converter.convert("[a](http://e.com/a*b*c)") == (
+        '<p><a href="http://e.com/a*b*c">a</a></p>'
+    )
+    assert converter.convert("[a](http://e.com/x_y*z)") == (
+        '<p><a href="http://e.com/x_y*z">a</a></p>'
+    )
+
+
+def test_underscore_emphasis_does_not_cross_link_syntax(converter):
+    """Verify that an emphasis pair may span a link without corrupting its URL."""
+    assert converter.convert("_see [link](http://e.com/a_b) now_") == (
+        '<p><em>see <a href="http://e.com/a_b">link</a> now</em></p>'
+    )
+    assert converter.convert("*[x](a_b)*") == '<p><em><a href="a_b">x</a></em></p>'
+
+
+def test_intraword_underscores_are_literal(converter):
+    """Verify that underscores inside a word do not start or end emphasis.
+
+    This follows the CommonMark rule for `_`, so identifiers such as
+    `snake_case_name` and `a_b_c` survive conversion unchanged.
+    """
+    assert converter.convert("snake_case_name and a_b_c") == (
+        "<p>snake_case_name and a_b_c</p>"
+    )
+    assert converter.convert("_italic_ stays, snake_case_name does not") == (
+        "<p><em>italic</em> stays, snake_case_name does not</p>"
+    )
+    assert converter.convert("__bold__ and intraword__bold__here") == (
+        "<p><strong>bold</strong> and intraword__bold__here</p>"
+    )
+    assert converter.convert("a_b_c and d_e_f") == "<p>a_b_c and d_e_f</p>"
+
+
+def test_link_with_title(converter):
+    """Verify that an optional link title becomes a `title` attribute, not part of the URL."""
+    assert converter.convert('[text](http://e.com "Title")') == (
+        '<p><a href="http://e.com" title="Title">text</a></p>'
+    )
+    assert converter.convert("[text](http://e.com 'Title')") == (
+        '<p><a href="http://e.com" title="Title">text</a></p>'
+    )
+
+
+def test_link_with_balanced_parentheses_in_url(converter):
+    """Verify that balanced parentheses inside a destination are preserved."""
+    assert converter.convert("[text](http://e.com/a_(b))") == (
+        '<p><a href="http://e.com/a_(b)">text</a></p>'
+    )
+
+
+def test_link_with_angle_bracket_url(converter):
+    """Verify that an angle-bracketed destination keeps spaces and is unbracketed."""
+    assert converter.convert("[text](<http://e.com/a b>)") == (
+        '<p><a href="http://e.com/a b">text</a></p>'
+    )
+
+
+def test_link_label_with_nested_brackets(converter):
+    """Verify that balanced brackets inside a label do not truncate it."""
+    assert converter.convert("[text [with] brackets](url)") == (
+        '<p><a href="url">text [with] brackets</a></p>'
+    )
+
+
+def test_footnote_marker_with_underscore(converter):
+    """Verify that footnote identifiers may contain underscores."""
+    md_text = "Text[^my_note]\n\n[^my_note]: Footnote body"
+    expected = (
+        '<p>Text<sup id="fnref:my_note">'
+        '<a href="#fn:my_note" class="footnote-ref">my_note</a></sup></p>\n'
+        '<div class="footnotes">\n'
+        "  <hr>\n"
+        "  <ol>\n"
+        '    <li id="fn:my_note">Footnote body '
+        '<a href="#fnref:my_note" class="footnote-backref">&uarr;</a></li>\n'
+        "  </ol>\n"
+        "</div>"
+    )
+    assert converter.convert(md_text) == expected
 
 
 def test_multiline_paragraphs_and_breaks(converter):
@@ -230,12 +336,7 @@ def test_triple_nested_list_with_type_switch(converter):
     """Verify that a deep nested list may switch type at any depth."""
     assert (
         converter.convert(
-            "- Item 1\n"
-            "- Item 2\n"
-            "  1. Sub 1\n"
-            "    - Subsub 1\n"
-            "  2. Sub 2\n"
-            "- Item 3"
+            "- Item 1\n- Item 2\n  1. Sub 1\n    - Subsub 1\n  2. Sub 2\n- Item 3"
         )
         == "<ul>\n"
         "  <li>Item 1</li>\n"
