@@ -1,6 +1,10 @@
-"""Convert Markdown text into clean, modern HTML5 markup."""
+"""Convert Markdown text into clean, modern and print-ready HTML5 markup."""
 
-from .converter import MarkdownToHTML
+from .converter import (
+    DEFAULT_PAGE_LAYOUT,
+    PAGE_LAYOUTS,
+    MarkdownToHTML,
+)
 
-__all__ = ["MarkdownToHTML"]
-__version__ = "0.6.1"
+__all__ = ["DEFAULT_PAGE_LAYOUT", "PAGE_LAYOUTS", "MarkdownToHTML"]
+__version__ = "1.0.0"

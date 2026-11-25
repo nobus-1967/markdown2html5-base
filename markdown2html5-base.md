@@ -27,14 +27,16 @@ This reference covers all `markdown2html5-base` features.
 * [18. YAML Front Matter](#18-yaml-front-matter)
 * [19. Backslash Escaping](#19-backslash-escaping)
 * [20. Paragraphs](#20-paragraphs)
-* [21. CSS Styles](#21-css-styles)
+* [21. CSS Styles and Print Orientation](#21-css-styles-and-print-orientation)
+* [22. Automatic PDF Header](#22-automatic-pdf-header)
 
 ## Programmatic Usage
 
 ```python
 from markdown2html5_base import MarkdownToHTML
 converter = MarkdownToHTML()
-html = converter.convert("# Hello")
+html = converter.convert("# Hello")  # portrait by default
+landscape_html = converter.convert("# Hello", orientation="landscape")
 print(html)
 ```
 
@@ -83,10 +85,10 @@ A link destination is taken verbatim and is never processed for emphasis or typo
 
 ## 4. Fenced Code Blocks
 
-A language tag after the opening fence (three backticks before and after the code) is rendered as a `<div class="code-lang">&sol;python&sol;</div>` label above the `<code>` element:
+A language tag after the opening fence (three backticks before and after the code) is rendered as a `<div class="code-lang">python</div>` label above the `<code>` element:
 
 ```html
-<div class="code-lang">&sol;python&sol;</div><pre><code>def hello():
+<div class="code-lang">python</div><pre><code>def hello():
     print("Hi")</code></pre>
 ```
 
@@ -350,7 +352,7 @@ End line with two spaces or backslash: `<br />`
 
 ## 18. YAML Front Matter
 
-If the file begins with a YAML front matter block between `---` lines, the converter emits a complete HTML5 document with the metadata in `<head>` and the body content between `<body>` tags. Without front matter, the output stays a bare HTML fragment. The `--css` option (or `include_css=True`) embeds the default `<style>` block regardless of whether front matter is present.
+The converter always emits a complete HTML5 document with the body content between `<body>` tags. A YAML front matter block between `---` lines, when present, supplies the metadata in `<head>`. The CSS3 `<style>` block is embedded regardless of whether front matter is present.
 
 ```yaml
 ---
@@ -366,7 +368,7 @@ published: 2026-08-09
 * `lang` becomes the `<html lang="...">` attribute (a valid BCP 47 tag).
 * `title` becomes the `<title>` element.
 * `author`, `description`, `keywords`, and `published` become `<meta name="..." content="..." />` tags.
-* A default `<style>` block with viewing-friendly CSS is embedded in `<head>`.
+* A CSS3 `<style>` block with viewing-friendly screen and print rules is embedded in `<head>`.
 
 ```html
 <!doctype html>
@@ -379,7 +381,7 @@ published: 2026-08-09
     <title>My Document</title>
     <meta name="published" content="2026-08-09" />
     <style>
-      /* default viewing-friendly CSS */
+      /* CSS3 base + portrait or landscape print rules */
     </style>
   </head>
   <body>
@@ -388,7 +390,7 @@ published: 2026-08-09
 </html>
 ```
 
-Any other keys are ignored, and if the file has no front matter at all, the output remains a bare fragment (unless `--css`/`include_css=True` is used, in which case it becomes a full document).
+Any other keys are ignored. Documents without front matter are still complete HTML5 documents with the default CSS and the automatic header script.
 
 ## 19. Backslash Escaping
 
@@ -402,183 +404,227 @@ Consecutive text lines merge into `<p>`. Blank lines separate paragraphs.
 
 Empty line after list close => `<!-- -->` preserves whitespace.
 
-## 21. CSS Styles
+## 21. CSS Styles and Print Orientation
 
-The converter (with `--css` option or `include_css=True`) embeds a default `<style>` block in `<head>` that provides viewing-friendly styling, regardless of YAML front matter.
-The predefined CSS rules include:
+Every document produced by the converter contains a single `<style>` block; emitting an unstyled HTML fragment is no longer supported. The block is assembled from three parts available as class attributes on `MarkdownToHTML`:
+
+| Attribute       | Purpose                                                                                                                                                                  |
+| ---------       | -------                                                                                                                                                                  |
+| `DOCUMENT_CSS`  | Starts with `/* Base Rules */`, then base CSS3 rules for screen/WebKitGTK: custom properties, typography, lists, code blocks, tables, figures, ruby and CJK font stacks. |
+| `PORTRAIT_CSS`  | Starts with `/* Portrait PDF/Print */`; A4 portrait `@page` margins and `@media print` rules.                                                                            |
+| `LANDSCAPE_CSS` | Starts with `/* Landscape PDF/Print */`; A4 landscape `@page` margins and `@media print` rules.                                                                          |
+
+The orientation name is stripped and lowercased, then validated against `("portrait", "landscape")`. An unknown value raises `ValueError`.
+
+Python API:
+
+```python
+from markdown2html5_base import MarkdownToHTML
+
+html = MarkdownToHTML().convert(markdown_text)                    # portrait
+html = MarkdownToHTML().convert(markdown_text, "landscape")       # landscape
+html = MarkdownToHTML().convert(markdown_text, page_layout="landscape")  # alias
+```
+
+CLI:
+
+```bash
+markdown2html5-base input.md --page portrait -o output.html
+markdown2html5-base input.md --page landscape -o output.html
+```
+
+### `MarkdownToHTML.DOCUMENT_CSS`
+
 ```css
+/* Base Rules */
+:root {
+  --bg-page: #ffffff;
+  --bg-subtle: #f5f5f5;
+  --bg-row-even: #fafafa;
+  --text-main: #000000;
+  --text-muted: #525252;
+  --border-color: #000000;
+  --border-subtle: #e0e0e0;
+  --accent-mark: #ffff00;
+  --font-serif: "Noto Serif", "Liberation Serif", "Times New Roman", serif;
+  --font-sans: "Noto Sans", "Liberation Sans", Arial, sans-serif;
+  --font-mono: "Noto Sans Mono", "Liberation Mono", monospace;
+  --radius-sm: 4px;
+  --space-base: 24px;
+  --code-padding-x: 16px;
+  --print-header: none;
+}
+*, *::before, *::after {
+  box-sizing: border-box;
+}
 body {
-  padding: 20px;
-  font-family: "Noto Serif", "Liberation Serif", "Times New Roman", Times, serif;
-  font-size: 18px;
-  line-height: 1.4;
-  color: #000000;
-  background-color: #ffffff;
+  margin: 0;
+  padding: var(--space-base) var(--space-base) var(--space-base) calc(var(--space-base) * 2);
+  font-family: var(--font-serif);
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--text-main);
+  background-color: var(--bg-page);
 }
-h1 {
-  margin-top: 1.2em;
-  margin-bottom: 0.6em;
-  font-family: "Noto Sans", "Liberation Sans", Arial, sans-serif;
+h1, h2, h3, h4, h5, h6 {
+  margin: 1.3em 0 0.5em;
+  font-family: var(--font-sans);
   font-weight: bold;
-  font-size: 32px;
-  hyphens: auto;
-  word-break: normal;
+  line-height: 1.25;
   overflow-wrap: break-word;
-  text-wrap: balance;
 }
-h2 {
-  margin-top: 1.2em;
-  margin-bottom: 0.6em;
-  font-family: "Noto Sans", "Liberation Sans", Arial, sans-serif;
-  font-weight: bold;
-  font-size: 28px;
-  hyphens: auto;
-  word-break: normal;
-  overflow-wrap: break-word;
-  text-wrap: balance;
-}
+h1 { font-size: 28px; margin-top: 0; }
+h2 { font-size: 24px; }
 h2#toc { font-style: italic; }
-h3 {
-  margin-top: 1.2em;
-  margin-bottom: 0.6em;
-  font-family: "Noto Sans", "Liberation Sans", Arial, sans-serif;
-  font-weight: bold;
-  font-size: 24px;
-  hyphens: auto;
-  word-break: normal;
-  overflow-wrap: break-word;
-  text-wrap: balance;
-}
-h4 {
-  margin-top: 1.2em;
-  margin-bottom: 0.6em;
-  font-family: "Noto Sans", "Liberation Sans", Arial, sans-serif;
-  font-weight: bold;
-  font-size: 20px;
-  hyphens: auto;
-  word-break: normal;
-  overflow-wrap: break-word;
-  text-wrap: balance;
-}
-h5 {
-  margin-top: 1.2em;
-  margin-bottom: 0.6em;
-  font-family: "Noto Sans", "Liberation Sans", Arial, sans-serif;
-  font-weight: bold;
-  font-size: 18px;
-  hyphens: auto;
-  word-break: normal;
-  overflow-wrap: break-word;
-  text-wrap: balance;
-}
-h6 {
-  margin-top: 1.2em;
-  margin-bottom: 0.6em;
-  font-family: "Noto Sans", "Liberation Sans", Arial, sans-serif;
-  font-weight: bold;
-  font-size: 18px;
-  font-style: italic;
-  hyphens: auto;
-  word-break: normal;
-  overflow-wrap: break-word;
-  text-wrap: balance;
-}
+h3 { font-size: 20px; }
+h4 { font-size: 18px; }
+h5 { font-size: 16px; }
+h6 { font-size: 16px; font-style: italic; }
 p {
-  hyphens: auto;
-  hyphenate-limit-chars: 6 3 3;
-  word-break: normal;
+  margin: 0.9em 0;
   overflow-wrap: break-word;
 }
 hr {
-  height: 4px;
-  margin-top: 32pt;
+  height: 2px;
+  margin: 24px 0;
   border: none;
-  background-color: #000000;
+  background-color: var(--border-color);
 }
 blockquote {
-  margin-left: 0;
-  padding-left: 20px;
-  border-left: 8px solid #f5f5f5;
-  hyphens: auto;
-  hyphenate-limit-chars: 6 3 3;
-  word-break: normal;
+  margin: 1.2em 0;
+  padding: 12px 20px;
+  border-left: 4px solid var(--border-color);
+  background-color: var(--bg-subtle);
+  font-style: italic;
   overflow-wrap: break-word;
 }
+blockquote > :first-child { margin-top: 0; }
+blockquote > :last-child { margin-bottom: 0; }
 mark {
-  padding: 0 2px;
-  border-radius: 4px;
-  background-color: #ffff00;
-  color: #000000;
+  padding: 2px 5px;
+  border-radius: var(--radius-sm);
+  background-color: var(--accent-mark);
+  color: var(--text-main);
 }
-a:link { color: #0000cd; }
+a:link { color: #0000cd; text-underline-offset: 2px; }
 a:visited { color: #9400d3; }
-a:hover { outline: none; color: #000080; }
-a:focus { outline: none; color: #000080; }
+a:hover, a:focus { outline: none; color: #000080; }
 a:active { color: #dc143c; }
-ol {
-  hyphens: auto;
-  hyphenate-limit-chars: 6 3 3;
-  word-break: normal;
+ol, ul {
+  margin: 1em 0;
+  padding-left: 0;
+  list-style: none;
   overflow-wrap: break-word;
 }
-ul {
-  hyphens: auto;
-  hyphenate-limit-chars: 6 3 3;
-  word-break: normal;
-  overflow-wrap: break-word;
+li > ol, li > ul {
+  margin: 0.4em 0 0.5em;
+  padding-left: 22px;
+}
+li > ol:last-child, li > ul:last-child {
+  margin-bottom: 0;
+}
+ol {
+  counter-reset: custom-counter;
 }
 li {
   position: relative;
-  padding-left: 20px;
-  hyphens: auto;
-  hyphenate-limit-chars: 6 3 3;
-  word-break: normal;
+  padding-left: 26px;
+  margin-bottom: 0.4em;
   overflow-wrap: break-word;
 }
-ol li input[type="checkbox"], ul li input[type="checkbox"] {
-  vertical-align: baseline;
-  accent-color: #000000;
-  opacity: 1;
-  cursor: not-allowed;
+li:last-child {
+  margin-bottom: 0;
 }
+ul > li::before {
+  content: "•";
+  position: absolute;
+  left: 8px;
+  top: 0;
+}
+ul ul > li::before { content: "◦"; }
+ul ul ul > li::before { content: "▪"; }
+ul.task-list > li,
+ul > li:has(input[type="checkbox"]) {
+  padding-left: 4px;
+}
+ul.task-list > li::before,
+ul > li:has(input[type="checkbox"])::before {
+  display: none;
+}
+ol > li {
+  counter-increment: custom-counter;
+}
+ol > li::before {
+  content: counter(custom-counter) ".";
+  position: absolute;
+  left: 0;
+  top: 0;
+  font-variant-numeric: tabular-nums;
+}
+ol ol > li::before { content: counter(custom-counter, lower-alpha) "."; }
+ol ol ol > li::before { content: counter(custom-counter, lower-roman) "."; }
+ol li input[type="checkbox"],
+ul li input[type="checkbox"] {
+  position: static;
+  display: inline-block;
+  width: 15px;
+  height: 15px;
+  margin: 0 8px 0 0;
+  vertical-align: -2px;
+  accent-color: var(--text-main);
+}
+dl { margin: 1.2em 0; }
 dt {
+  margin-top: 0.9em;
   font-weight: bold;
-  hyphens: auto;
-  word-break: break-word;
   overflow-wrap: anywhere;
 }
 dd {
-  position: relative;
-  margin-left: 0;
-  padding-left: 20px;
+  margin: 0.25em 0 0;
+  padding-left: 14px;
+  border-left: 2px solid var(--border-subtle);
   font-style: italic;
-  hyphens: auto;
-  hyphenate-limit-chars: 6 3 3;
-  word-break: normal;
   overflow-wrap: break-word;
 }
 code {
-  padding: 2px 4px;
-  border-radius: 4px;
-  font-family: "Noto Sans Mono", "Liberation Mono", "Courier New", Courier, monospace;
-  font-size: 0.9em;
+  padding: 2px 5px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background-color: var(--bg-subtle);
+  font-family: var(--font-mono);
+  font-size: 0.88em;
   line-height: 1;
-  hyphens: none !important;
-  white-space: normal;
-  word-break: break-all;
   overflow-wrap: anywhere;
 }
+div.code-lang {
+  display: block;
+  width: fit-content;
+  position: relative;
+  z-index: 2;
+  margin: 1.2em calc(var(--code-padding-x) + 1px) -10px auto;
+  padding: 3px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: 0.8em;
+  font-weight: bold;
+  line-height: 1;
+  background-color: var(--text-main);
+  color: var(--bg-page);
+}
 pre {
+  position: relative;
+  z-index: 1;
   max-width: 100%;
-  margin: 0;
-  padding: 20px;
-  border: 1px solid #000000;
-  background-color: #f5f5f5;
-  overflow: auto;
-  scrollbar-color: #000000 transparent;
-  white-space: pre-wrap;
-  word-break: break-all;
-  overflow-wrap: anywhere;
+  margin: 1.2em 0;
+  padding: 16px var(--code-padding-x);
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-subtle);
+  overflow-x: auto;
+}
+div.code-lang + pre {
+  margin-top: 0;
+  padding-top: 22px;
 }
 pre > code {
   display: block;
@@ -586,41 +632,42 @@ pre > code {
   padding: 0;
   border: none;
   border-radius: 0;
-  line-height: 1.2;
+  line-height: 1.45;
   background-color: transparent;
-  overflow: visible;
-  hyphens: none !important;
   white-space: pre;
-  word-break: normal;
   overflow-wrap: normal;
 }
-div.code-lang {
-  display: block;
-  padding: 10px 20px;
-  font-family: "Noto Sans Mono", "Liberation Mono", "Courier New", Courier, monospace;
-  font-size: 0.9em;
-  line-height: 1;
-  background-color: #000000;
-  color: #ffffff;
+table {
+  width: 100%;
+  margin: 1.5em 0;
+  border-collapse: collapse;
+  border: 1px solid var(--border-color);
+}
+th, td {
+  padding: 10px 14px;
+  text-align: left;
+  border: 1px solid var(--border-color);
+  overflow-wrap: anywhere;
+}
+thead tr {
+  background-color: var(--text-main);
+  color: var(--bg-page);
+}
+thead th {
+  font-family: var(--font-sans);
   font-weight: bold;
 }
-table {
-  margin-top: 32pt;
-  border-collapse: collapse;
+
+tbody tr:nth-child(even) {
+  background-color: var(--bg-row-even);
 }
-th { padding: 10px 12px; border: 1px solid #000000; font-weight: bold; }
-td { padding: 10px 12px; border: 1px solid #000000; }
-thead tr { background-color: #000000; color: #ffffff; }
-thead th { hyphens: auto; word-break: break-word; overflow-wrap: anywhere; }
-thead td { hyphens: auto; word-break: break-word; overflow-wrap: anywhere; }
-tbody th { hyphens: auto; word-break: break-word; overflow-wrap: anywhere; }
-tbody td { hyphens: auto; word-break: break-word; overflow-wrap: anywhere; }
-tfoot tr { background-color: #f5f5f5; font-style: italic; }
-tfoot th { hyphens: auto; word-break: break-word; overflow-wrap: anywhere; }
-tfoot td { hyphens: auto; word-break: break-word; overflow-wrap: anywhere; }
+tfoot tr {
+  background-color: var(--bg-subtle);
+  font-style: italic;
+}
 figure {
   display: block;
-  margin: 0;
+  margin: 1.2em 0;
 }
 figure img {
   display: block;
@@ -628,55 +675,204 @@ figure img {
   height: auto;
 }
 figcaption {
-  text-align: left;
+  margin-top: 6px;
+  font-size: 0.9em;
   font-style: italic;
-  hyphens: auto;
-  hyphenate-limit-chars: 6 3 3;
-  word-break: normal;
+  color: var(--text-muted);
   overflow-wrap: break-word;
 }
 ruby { ruby-position: over; ruby-align: space-around; }
-rt {
-  letter-spacing: 0.05em;
-  font-size: 0.55em;
-  line-break: strict;
-  white-space: nowrap;
-  overflow-wrap: normal;
-}
+rt { letter-spacing: 0.05em; font-size: 0.55em; white-space: nowrap; }
 rp { display: none; }
-span[lang="ja"] {
-  font-family: "Noto Serif CJK JP", "Source Han Serif JP", "源ノ明朝", "Source Han Serif", "Hiragino Mincho ProN", "Hiragino Mincho Pro", "IPAexMincho", "IPAMincho", "MS PMincho", "MS Mincho", serif;
-  word-break: break-all;
-  line-break: normal;
+span[lang="ja"] { font-family: "Noto Serif CJK JP", "Source Han Serif JP", serif; }
+span[lang="zh-CN"], span[lang="zh-Hans"] { font-family: "Noto Serif CJK SC", "Source Han Serif SC", serif; }
+span[lang="zh-TW"], span[lang="zh-Hant"] { font-family: "Noto Serif CJK TC", "Source Han Serif TC", serif; }
+span[lang="zh-HK"] { font-family: "Noto Serif CJK HK", "Source Han Serif HK", serif; }
+span[lang="ko"] { font-family: "Noto Serif CJK KR", "Source Han Serif KR", serif; }
+```
+
+### `MarkdownToHTML.PORTRAIT_CSS`
+
+```css
+/* Portrait PDF/Print */
+@page {
+  size: A4 portrait;
+  margin: 22mm 15mm 20mm 25mm;
+  @top-center {
+    content: var(--print-header);
+    font-family: var(--font-sans);
+    font-size: 8.5pt;
+    color: var(--text-muted);
+    vertical-align: bottom;
+    padding-bottom: 6pt;
+    border-bottom: 0.5pt solid var(--border-subtle);
+  }
+  @bottom-center {
+    content: counter(page);
+    font-family: var(--font-sans);
+    font-size: 8.5pt;
+    color: var(--text-muted);
+    vertical-align: top;
+    padding-top: 6pt;
+  }
 }
-span[lang="zh-CN"] {
-  font-family: "Noto Serif CJK SC", "Source Han Serif SC", "思源宋体", "Source Han Serif CN", "Source Han Serif", "Songti SC", "FandolSong", "WenQuanYi Bitmap Song", "SimSun", serif;
-  word-break: break-all;
-  line-break: normal;
+@media print {
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  body {
+    padding: 0;
+    font-size: 11pt;
+    line-height: 1.45;
+    color: #000000;
+    background-color: #ffffff;
+  }
+  h1 { font-size: 20pt; }
+  h2 { font-size: 17pt; }
+  h3 { font-size: 14.5pt; }
+  h4 { font-size: 12.5pt; }
+  h5, h6 { font-size: 11pt; }
+  h1, h2, h3, h4, h5, h6, dt, div.code-lang {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+  blockquote, figure, pre, tr {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  p, li {
+    orphans: 3;
+    widows: 3;
+  }
+  pre {
+    overflow: visible;
+  }
+  pre > code {
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
+  }
+  thead {
+    display: table-header-group;
+  }
+  tfoot {
+    display: table-footer-group;
+  }
+  a:link, a:visited {
+    color: #000000;
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+  }
+  a[href^="http"]::after {
+    content: " (" attr(href) ")";
+    font-family: var(--font-mono);
+    font-size: 0.85em;
+    color: var(--text-muted);
+    word-break: break-all;
+  }
 }
-span[lang="zh-Hans"] {
-  font-family: "Noto Serif CJK SC", "Source Han Serif SC", "思源宋体", "Source Han Serif CN", "Source Han Serif", "Songti SC", "FandolSong", "WenQuanYi Bitmap Song", "SimSun", serif;
-  word-break: break-all;
-  line-break: normal;
+```
+
+### `MarkdownToHTML.LANDSCAPE_CSS`
+
+```css
+/* Landscape PDF/Print */
+@page {
+  size: A4 landscape;
+  margin: 16mm 16mm 16mm 32mm;
+  @top-center {
+    content: var(--print-header);
+    font-family: var(--font-sans);
+    font-size: 8.5pt;
+    color: var(--text-muted);
+    vertical-align: bottom;
+    padding-bottom: 5pt;
+    border-bottom: 0.5pt solid var(--border-subtle);
+  }
+  @bottom-center {
+    content: counter(page);
+    font-family: var(--font-sans);
+    font-size: 8.5pt;
+    color: var(--text-muted);
+    vertical-align: top;
+    padding-top: 5pt;
+  }
 }
-span[lang="zh-TW"] {
-  font-family: "Noto Serif CJK TC", "Source Han Serif TC", "思源宋體", "Source Han Serif TW", "Source Han Serif", "Apple LiSung", "LiSong Pro", "HanaMinA", "PMingLiU", "MingLiU", serif;
-  word-break: break-all;
-  line-break: normal;
+@media print {
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  body {
+    padding: 0;
+    font-size: 11pt;
+    line-height: 1.45;
+    color: #000000;
+    background-color: #ffffff;
+  }
+  h1 { font-size: 20pt; }
+  h2 { font-size: 17pt; }
+  h3 { font-size: 14.5pt; }
+  h4 { font-size: 12.5pt; }
+  h5, h6 { font-size: 11pt; }
+  h1, h2, h3, h4, h5, h6, dt, div.code-lang {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+  blockquote, figure, pre, tr {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  p, li {
+    orphans: 3;
+    widows: 3;
+  }
+  pre {
+    overflow: visible;
+  }
+  pre > code {
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
+  }
+  thead {
+    display: table-header-group;
+  }
+  tfoot {
+    display: table-footer-group;
+  }
+  a:link, a:visited {
+    color: #000000;
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+  }
+  a[href^="http"]::after {
+    content: " (" attr(href) ")";
+    font-family: var(--font-mono);
+    font-size: 0.85em;
+    color: var(--text-muted);
+    word-break: break-all;
+  }
 }
-span[lang="zh-Hant"] {
-  font-family: "Noto Serif CJK TC", "Source Han Serif TC", "思源宋體", "Source Han Serif TW", "Source Han Serif", "Apple LiSung", "LiSong Pro", "HanaMinA", "PMingLiU", "MingLiU", serif;
-  word-break: break-all;
-  line-break: normal;
-}
-span[lang="zh-HK"] {
-  font-family: "Noto Serif CJK HK", "Source Han Serif HK", "思源宋體 香港", "思源宋體", "Source Han Serif", "Apple LiSung", "LiSong Pro", "HanaMinA", "MingLiU_HKSCS", "PMingLiU", "MingLiU", serif;
-  word-break: break-all;
-  line-break: normal;
-}
-span[lang="ko"] {
-  font-family: "Noto Serif CJK KR", "Source Han Serif KR", "본명조", "Source Han Serif", "AppleMyungjo", "UnBatang", "은바탕", "Batang", serif;
-  word-break: break-all;
-  line-break: normal;
-}
+```
+
+## 22. Automatic PDF Header
+
+Every generated document ends `<body>` with the template script from the print-styles guide. It reads `<meta name="author">`, `<title>` and `<meta name="published">` (or `meta name="date"`), builds `author, title (published)` and stores it in the `--print-header` custom property used by the `@top-center` margin box. Missing metadata simply leaves the header empty.
+
+```html
+<script>
+  (() => {
+    const author = document.querySelector('meta[name="author"]')?.content.trim() || '';
+    const title = document.title.trim() || '';
+    const published = document.querySelector('meta[name="published"], meta[name="date"]')?.content.trim() || '';
+
+    const base = [author, title].filter(Boolean).join(', ');
+    const headerText = published ? (base ? `${base} (${published})` : published) : base;
+
+    if (headerText) {
+      const safeText = headerText.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+      document.documentElement.style.setProperty('--print-header', `"${safeText}"`);
+    }
+  })();
+</script>
 ```

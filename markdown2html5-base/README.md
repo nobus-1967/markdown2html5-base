@@ -31,10 +31,11 @@ markdown2html5-base -v
 ```bash
 markdown2html5-base input.md -o output.html
 ```
-* **Embed the default viewing-friendly CSS in the output document:**
+* **Choose the print page orientation:**
 
 ```bash
-markdown2html5-base --css input.md -o output.html
+markdown2html5-base input.md --page portrait -o output.html
+markdown2html5-base input.md --page landscape -o output.html
 ```
 * **Use inside Unix pipelines:**
 
@@ -42,18 +43,11 @@ markdown2html5-base --css input.md -o output.html
 echo "# Hello" | markdown2html5-base
 ```
 
-### Embedding the Default CSS
+### CSS and Print Headers
 
-By default the CLI produces a bare HTML fragment (or a document without a `<style>` block). Pass `--css` to embed the viewing-friendly stylesheet
-in `<head>` and wrap the output in a full HTML document:
+Every conversion produces a complete HTML5 document with CSS3 print styles embedded in `<head>`; there is no longer an option to emit bare, unstyled HTML. Use `--page portrait` or `--page landscape`; portrait is the default. In Python the same choice is `MarkdownToHTML().convert(text, orientation="landscape")`.
 
-```bash
-markdown2html5-base --css input.md -o output.html
-```
-
-The embedded CSS covers fonts, headings, code blocks, tables, blockquotes, links, highlight marks, CJK font stacks, ruby annotations, and horizontal
-rules. `--css` works regardless of YAML front matter.
-The same behaviour is available in Python via `MarkdownToHTML().convert(text, include_css=True)`.
+The selected stylesheet starts with a `/* Portrait PDF/Print */` or `/* Landscape PDF/Print */` comment and contains the matching `@page` margins and `@media print` rules. A script at the end of `<body>` reads `<title>`, `<meta name="author">` and `<meta name="published">` (or `date`) and sets the `--print-header` custom property used by Chromium's PDF header.
 
 ---
 
@@ -70,7 +64,7 @@ markdown_text = "# My Heading\nThis is text with **bold font**."
 html_output = converter.convert(markdown_text)
 print(html_output)
 
-# Output: <h1>My Heading</h1>\n<p>This is text with <strong>bold font</strong>.</p>
+# Output: a full <!doctype html> document with embedded CSS3 print styles.
 ```
 
 ---
@@ -89,10 +83,10 @@ print(html_output)
 
 ### 2. Extended Syntax
 
-* **Fenced Code Blocks:** HTML content inside code blocks (three backticks before and after) is escaped automatically. Fenced blocks render as `<pre><code>`. A language tag after the opening fence (e.g., `python`) is rendered as a `<div class="code-lang">&sol;python&sol;</div>` label above the `<code>` block:
+* **Fenced Code Blocks:** HTML content inside code blocks (three backticks before and after) is escaped automatically. Fenced blocks render as `<pre><code>`. A language tag after the opening fence (e.g., `python`) is rendered as a `<div class="code-lang">python</div>` label above the `<code>` block:
 
 ```
-<div class="code-lang">&sol;python&sol;</div><pre><code>print("Hello, World!")</code></pre>
+<div class="code-lang">python</div><pre><code>print("Hello, World!")</code></pre>
 ```
 * **Tables:** Cell alignment is configured via the delimiter row. A footer section can be added by separating it with `=` signs; footer rows render in italics:
 
@@ -113,7 +107,7 @@ This produces a `<tfoot>` section (styled in italics by the default CSS).
 Term
 : Definition of the term
 ```
-* **Headings with custom IDs:** `## Custom Heading Title {#custom-id}`
+* **Headings:** every heading gets an automatic lowercase slug ID (e.g. `# Heading 1` → `<h1 id="heading-1">`), so TOC fragment links work; `## Custom Heading Title {#custom-id}` overrides it with an explicit ID.
 * **Footnotes:** Insert markers `[^1]` anywhere and define their values globally via `[^1]: Footnote body text.` Identifiers may contain letters, digits, underscores and dashes, e.g. `[^see_note_1]`.
 * **Text Markers:** Strikethrough `~~text~~`, text highlight `==marker==`, underline `^^text^^`, subscript `H~2~O`, and superscript `X^2^`
 * **Hidden Comments:** `[comment text]: #` renders as an invisible HTML comment `<!--comment text-->`
@@ -202,7 +196,7 @@ The converter formats raw text on the fly for professional typesetting, emitting
 
 ### 6. YAML Front Matter
 
-If the file begins with a YAML front matter block between `---` lines, the converter emits a complete HTML5 document with the metadata in `<head>` and the body content between `<body>` tags. Without front matter, the output stays a bare HTML fragment.
+The converter always emits a complete HTML5 document with the body content between `<body>` tags. YAML front matter between `---` lines, when present, supplies the metadata in `<head>`.
 
 ```yaml
 ---
@@ -211,14 +205,14 @@ title: My Document
 author: Jane Doe
 description: A short description.
 keywords: python, markdown, html5
-published: 2026-08-09
+published: 2026-25-11
 ---
 ```
 
 * `lang` becomes the `<html lang="...">` attribute (a valid BCP 47 tag).
 * `title` becomes the `<title>` element.
 * `author`, `description`, `keywords`, and `published` become `<meta name="..." content="..." />` tags. `date` is accepted as an alias for `published`.
-* A default `<style>` block with viewing-friendly CSS (fonts, headings, code blocks, tables, ruby, etc.) is embedded in `<head>` when `--css` is passed on the CLI or `include_css=True` is used in Python.
+* A `<style>` block with CSS3 screen/print rules (fonts, headings, code blocks, tables, ruby, etc.) is always embedded in `<head>`.
 
 ```html
 <!doctype html>
@@ -236,6 +230,9 @@ published: 2026-08-09
   </head>
   <body>
     ...
+    <script>
+      /* automatic --print-header setup */
+    </script>
   </body>
 </html>
 ```
@@ -268,285 +265,17 @@ If you need to render a Markdown symbol literally, escape it by prefixing with a
 | `:ok:`         | 👌                  |
 | `:check_mark:` | ✔️                 |
 
-### 9. CSS Styles
+### 9. CSS Styles and Print Orientation
 
-The converter can embed a default `<style>` block in `<head>` (with `--css` or `include_css=True`) that provides viewing-friendly styling, regardless of YAML front matter.
-Full list of CSS rules (available in code as `MarkdownToHTML.DOCUMENT_CSS`):
+Every output document contains one `<style>` block. It is assembled from:
 
-```
-body {
-  padding: 20px;
-  font-family: "Noto Serif", "Liberation Serif", "Times New Roman", Times, serif;
-  font-size: 18px;
-  line-height: 1.4;
-  color: #000000;
-  background-color: #ffffff;
-}
-h1 {
-  margin-top: 1.2em;
-  margin-bottom: 0.6em;
-  font-family: "Noto Sans", "Liberation Sans", Arial, sans-serif;
-  font-weight: bold;
-  font-size: 32px;
-  hyphens: auto;
-  word-break: normal;
-  overflow-wrap: break-word;
-  text-wrap: balance;
-}
-h2 {
-  margin-top: 1.2em;
-  margin-bottom: 0.6em;
-  font-family: "Noto Sans", "Liberation Sans", Arial, sans-serif;
-  font-weight: bold;
-  font-size: 28px;
-  hyphens: auto;
-  word-break: normal;
-  overflow-wrap: break-word;
-  text-wrap: balance;
-}
-h2#toc { font-style: italic; }
-h3 {
-  margin-top: 1.2em;
-  margin-bottom: 0.6em;
-  font-family: "Noto Sans", "Liberation Sans", Arial, sans-serif;
-  font-weight: bold;
-  font-size: 24px;
-  hyphens: auto;
-  word-break: normal;
-  overflow-wrap: break-word;
-  text-wrap: balance;
-}
-h4 {
-  margin-top: 1.2em;
-  margin-bottom: 0.6em;
-  font-family: "Noto Sans", "Liberation Sans", Arial, sans-serif;
-  font-weight: bold;
-  font-size: 20px;
-  hyphens: auto;
-  word-break: normal;
-  overflow-wrap: break-word;
-  text-wrap: balance;
-}
-h5 {
-  margin-top: 1.2em;
-  margin-bottom: 0.6em;
-  font-family: "Noto Sans", "Liberation Sans", Arial, sans-serif;
-  font-weight: bold;
-  font-size: 18px;
-  hyphens: auto;
-  word-break: normal;
-  overflow-wrap: break-word;
-  text-wrap: balance;
-}
-h6 {
-  margin-top: 1.2em;
-  margin-bottom: 0.6em;
-  font-family: "Noto Sans", "Liberation Sans", Arial, sans-serif;
-  font-weight: bold;
-  font-size: 18px;
-  font-style: italic;
-  hyphens: auto;
-  word-break: normal;
-  overflow-wrap: break-word;
-  text-wrap: balance;
-}
-p {
-  hyphens: auto;
-  hyphenate-limit-chars: 6 3 3;
-  word-break: normal;
-  overflow-wrap: break-word;
-}
-hr {
-  height: 4px;
-  margin: 20px 0;
-  border: none;
-  background-color: #000000;
-}
-blockquote {
-  margin-left: 0;
-  padding-left: 20px;
-  border-left: 8px solid #f5f5f5;
-  hyphens: auto;
-  hyphenate-limit-chars: 6 3 3;
-  word-break: normal;
-  overflow-wrap: break-word;
-}
-mark {
-  padding: 0 2px;
-  border-radius: 4px;
-  background-color: #ffff00;
-  color: #000000;
-}
-a:link { color: #0000cd; }
-a:visited { color: #9400d3; }
-a:hover { outline: none; color: #000080; }
-a:focus { outline: none; color: #000080; }
-a:active { color: #dc143c; }
-ol {
-  hyphens: auto;
-  hyphenate-limit-chars: 6 3 3;
-  word-break: normal;
-  overflow-wrap: break-word;
-}
-ul {
-  hyphens: auto;
-  hyphenate-limit-chars: 6 3 3;
-  word-break: normal;
-  overflow-wrap: break-word;
-}
-li {
-  position: relative;
-  padding-left: 20px;
-  hyphens: auto;
-  hyphenate-limit-chars: 6 3 3;
-  word-break: normal;
-  overflow-wrap: break-word;
-}
-ol li input[type="checkbox"], ul li input[type="checkbox"] {
-  vertical-align: baseline;
-  accent-color: #000000;
-  opacity: 1;
-  cursor: not-allowed;
-}
-dt {
-  font-weight: bold;
-  hyphens: auto;
-  word-break: break-word;
-  overflow-wrap: anywhere;
-}
-dd {
-  position: relative;
-  margin-left: 0;
-  padding-left: 20px;
-  font-style: italic;
-  hyphens: auto;
-  hyphenate-limit-chars: 6 3 3;
-  word-break: normal;
-  overflow-wrap: break-word;
-}
-code {
-  padding: 2px 4px;
-  border-radius: 4px;
-  font-family: "Noto Sans Mono", "Liberation Mono", "Courier New", Courier, monospace;
-  font-size: 0.9em;
-  line-height: 1;
-  hyphens: none !important;
-  white-space: normal;
-  word-break: break-all;
-  overflow-wrap: anywhere;
-}
-pre {
-  max-width: 100%;
-  margin: 0;
-  padding: 20px;
-  border: 1px solid #000000;
-  background-color: #f5f5f5;
-  overflow: auto;
-  scrollbar-color: #000000 transparent;
-  white-space: pre-wrap;
-  word-break: break-all;
-  overflow-wrap: anywhere;
-}
-pre > code {
-  display: block;
-  margin: 0;
-  padding: 0;
-  border: none;
-  border-radius: 0;
-  line-height: 1.2;
-  background-color: transparent;
-  overflow: visible;
-  hyphens: none !important;
-  white-space: pre;
-  word-break: normal;
-  overflow-wrap: normal;
-}
-div.code-lang {
-  display: block;
-  padding: 10px 20px;
-  font-family: "Noto Sans Mono", "Liberation Mono", "Courier New", Courier, monospace;
-  font-size: 0.9em;
-  line-height: 1;
-  background-color: #000000;
-  color: #ffffff;
-  font-weight: bold;
-}
-table {
-  margin-top: 32pt;
-  border-collapse: collapse;
-}
-th { padding: 10px 12px; border: 1px solid #000000; font-weight: bold; }
-td { padding: 10px 12px; border: 1px solid #000000; }
-thead tr { background-color: #000000; color: #ffffff; }
-thead th { hyphens: auto; word-break: break-word; overflow-wrap: anywhere; }
-thead td { hyphens: auto; word-break: break-word; overflow-wrap: anywhere; }
-tbody th { hyphens: auto; word-break: break-word; overflow-wrap: anywhere; }
-tbody td { hyphens: auto; word-break: break-word; overflow-wrap: anywhere; }
-tfoot tr { background-color: #f5f5f5; font-style: italic; }
-tfoot th { hyphens: auto; word-break: break-word; overflow-wrap: anywhere; }
-tfoot td { hyphens: auto; word-break: break-word; overflow-wrap: anywhere; }
-figure {
-  display: block;
-  margin: 0;
-}
-figure img {
-  display: block;
-  max-width: 100%;
-  height: auto;
-}
-figcaption {
-  text-align: left;
-  font-style: italic;
-  hyphens: auto;
-  hyphenate-limit-chars: 6 3 3;
-  word-break: normal;
-  overflow-wrap: break-word;
-}
-ruby { ruby-position: over; ruby-align: space-around; }
-rt {
-  letter-spacing: 0.05em;
-  font-size: 0.55em;
-  line-break: strict;
-  white-space: nowrap;
-  overflow-wrap: normal;
-}
-rp { display: none; }
-span[lang="ja"] {
-  font-family: "Noto Serif CJK JP", "Source Han Serif JP", "源ノ明朝", "Source Han Serif", "Hiragino Mincho ProN", "Hiragino Mincho Pro", "IPAexMincho", "IPAMincho", "MS PMincho", "MS Mincho", serif;
-  word-break: break-all;
-  line-break: normal;
-}
-span[lang="zh-CN"] {
-  font-family: "Noto Serif CJK SC", "Source Han Serif SC", "思源宋体", "Source Han Serif CN", "Source Han Serif", "Songti SC", "FandolSong", "WenQuanYi Bitmap Song", "SimSun", serif;
-  word-break: break-all;
-  line-break: normal;
-}
-span[lang="zh-Hans"] {
-  font-family: "Noto Serif CJK SC", "Source Han Serif SC", "思源宋体", "Source Han Serif CN", "Source Han Serif", "Songti SC", "FandolSong", "WenQuanYi Bitmap Song", "SimSun", serif;
-  word-break: break-all;
-  line-break: normal;
-}
-span[lang="zh-TW"] {
-  font-family: "Noto Serif CJK TC", "Source Han Serif TC", "思源宋體", "Source Han Serif TW", "Source Han Serif", "Apple LiSung", "LiSong Pro", "HanaMinA", "PMingLiU", "MingLiU", serif;
-  word-break: break-all;
-  line-break: normal;
-}
-span[lang="zh-Hant"] {
-  font-family: "Noto Serif CJK TC", "Source Han Serif TC", "思源宋體", "Source Han Serif TW", "Source Han Serif", "Apple LiSung", "LiSong Pro", "HanaMinA", "PMingLiU", "MingLiU", serif;
-  word-break: break-all;
-  line-break: normal;
-}
-span[lang="zh-HK"] {
-  font-family: "Noto Serif CJK HK", "Source Han Serif HK", "思源宋體 香港", "思源宋體", "Source Han Serif", "Apple LiSung", "LiSong Pro", "HanaMinA", "MingLiU_HKSCS", "PMingLiU", "MingLiU", serif;
-  word-break: break-all;
-  line-break: normal;
-}
-span[lang="ko"] {
-  font-family: "Noto Serif CJK KR", "Source Han Serif KR", "본명조", "Source Han Serif", "AppleMyungjo", "UnBatang", "은바탕", "Batang", serif;
-  word-break: break-all;
-  line-break: normal;
-}
-```
+* `MarkdownToHTML.DOCUMENT_CSS` — starts with `/* Base Rules */`, then base CSS3 rules for screen/WebKitGTK (`:root` variables, typography, lists, code blocks, tables, figures, ruby and CJK font stacks).
+* `MarkdownToHTML.PORTRAIT_CSS` — selected by default; begins with `/* Portrait PDF/Print */` and defines A4 portrait `@page` margins plus `@media print` rules.
+* `MarkdownToHTML.LANDSCAPE_CSS` — selected with `orientation="landscape"`; begins with `/* Landscape PDF/Print */` and defines A4 landscape `@page` margins plus `@media print` rules.
+
+The orientation is validated and normalised case-insensitively. On the CLI use `--page portrait` or `--page landscape`; in Python use
+`MarkdownToHTML().convert(text, orientation="landscape")`. An unknown value raises `ValueError`.
+
 ---
 
 ## 🧪 Testing

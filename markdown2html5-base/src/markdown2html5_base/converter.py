@@ -11,6 +11,9 @@ import re
 from dataclasses import dataclass
 from typing import ClassVar, Pattern
 
+PAGE_LAYOUTS = ("portrait", "landscape")
+DEFAULT_PAGE_LAYOUT = "portrait"
+
 
 @dataclass
 class _ListFrame:
@@ -154,6 +157,8 @@ class MarkdownToHTML:
     EMOJI_RE: ClassVar[Pattern[str]] = re.compile(r":([a-zA-Z0-9_]+):")
     COMMENT_RE: ClassVar[Pattern[str]] = re.compile(r"^\[(.+)\]:\s+#\s*$")
     HEADING_RE: ClassVar[Pattern[str]] = re.compile(r"^(#{1,6})\s+(.*?)$")
+    HEADING_ID_STRIP_RE: ClassVar[Pattern[str]] = re.compile(r"`+|\{:[^}]*\}|[*_~]")
+    HEADING_SLUG_RE: ClassVar[Pattern[str]] = re.compile(r"[^\w\s-]+", re.UNICODE)
     HR_RE: ClassVar[Pattern[str]] = re.compile(r"^(?:-{3,}|\*{3,}|_{3,})$")
     RUBY_RE: ClassVar[Pattern[str]] = re.compile(r"\{([^{}:|]+)\|([^}]+)\}")
     PROTECT_CODE_RE: ClassVar[Pattern[str]] = re.compile(r"`([^`\n]+)`")
@@ -170,6 +175,51 @@ class MarkdownToHTML:
     }
 
     DOCUMENT_CSS: ClassVar[str]
+    PORTRAIT_CSS: ClassVar[str]
+    LANDSCAPE_CSS: ClassVar[str]
+    DOCUMENT_SCRIPT: ClassVar[str]
+    PAGE_LAYOUTS: ClassVar[tuple[str, ...]] = ("portrait", "landscape")
+    DEFAULT_PAGE_LAYOUT: ClassVar[str] = "portrait"
+
+    @classmethod
+    def _normalize_orientation(cls, orientation: str) -> str:
+        """Normalize and validate a page orientation name."""
+        value = orientation.strip().lower()
+        if value not in cls.PAGE_LAYOUTS:
+            valid = ", ".join(cls.PAGE_LAYOUTS)
+            raise ValueError(
+                f"Unknown page orientation: {orientation!r} (choose from {valid})"
+            )
+        return value
+
+    @classmethod
+    def _css_for_orientation(cls, orientation: str) -> str:
+        """Return the base CSS together with the print CSS for an orientation."""
+        value = cls._normalize_orientation(orientation)
+        layout_css = cls.PORTRAIT_CSS if value == "portrait" else cls.LANDSCAPE_CSS
+        return cls.DOCUMENT_CSS + "\n" + layout_css
+
+    def _heading_slug(self, title: str) -> str:
+        """Turn visible heading text into a lowercase, URL-safe anchor id."""
+        plain = title
+        for char, placeholder in self.ESCAPE_CHARS.items():
+            plain = plain.replace(placeholder, char)
+        plain = self.HEADING_ID_STRIP_RE.sub("", plain).strip().lower()
+        slug = self.HEADING_SLUG_RE.sub("", plain)
+        slug = re.sub(r"\s+", "-", slug)
+        slug = re.sub(r"-+", "-", slug).strip("-")
+        return slug or "section"
+
+    @staticmethod
+    def _unique_heading_id(base: str, used: set[str]) -> str:
+        """Return ``base`` or a numbered variant not already assigned to a heading."""
+        candidate = base
+        suffix = 1
+        while candidate in used:
+            candidate = f"{base}-{suffix}"
+            suffix += 1
+        used.add(candidate)
+        return candidate
 
     def _parse_front_matter(self, text: str) -> tuple[str, dict[str, str]]:
         """Parse optional YAML-style front matter configurations, returning body text and fields."""
@@ -201,9 +251,9 @@ class MarkdownToHTML:
         return body, front_matter
 
     def _build_document(
-        self, body: str, front_matter: dict[str, str], include_css: bool = False
+        self, body: str, front_matter: dict[str, str], orientation: str
     ) -> str:
-        """Construct a complete HTML5 document structure containing meta headers and layouts."""
+        """Construct a complete HTML5 document with metadata, CSS and header script."""
         lang = front_matter.get("lang", "")
         lang_attr = f' lang="{lang}"' if lang else ""
         meta_keys = ("author", "description", "keywords")
@@ -219,8 +269,9 @@ class MarkdownToHTML:
             head_elements.append(
                 f'    <meta name="published" content="{front_matter["published"]}" />'
             )
-        if include_css:
-            head_elements.append(f"    <style>\n{self.DOCUMENT_CSS}    </style>")
+        head_elements.append(
+            f"    <style>\n{self._css_for_orientation(orientation)}    </style>"
+        )
         html_layout = [
             "<!doctype html>",
             f"<html{lang_attr}>",
@@ -231,7 +282,7 @@ class MarkdownToHTML:
         ]
         if body:
             html_layout.append(body)
-        html_layout.extend(["  </body>", "</html>"])
+        html_layout.extend([self.DOCUMENT_SCRIPT.rstrip("\n"), "  </body>", "</html>"])
         return "\n".join(html_layout)
 
     @staticmethod
@@ -278,7 +329,9 @@ class MarkdownToHTML:
     def _render_code_block(self, content: str, lang: str = "") -> str:
         """Render escaped code content inside pre-code containers with a language label."""
         escaped = self._escape_html(content)
-        label = f'<div class="code-lang">&sol;{lang}&sol;</div>' if lang else ""
+        label = (
+            f'<div class="code-lang">{self._escape_html(lang)}</div>' if lang else ""
+        )
         return f"{label}<pre><code>{escaped}</code></pre>"
 
     def _render_paragraph(self, buffer_lines: list[str], lang: str = "") -> str:
@@ -646,17 +699,31 @@ class MarkdownToHTML:
 
         return text
 
-    def convert(self, text: str, include_css: bool = False) -> str:
-        """Convert a structural Markdown source text into standard clean HTML strings."""
+    def convert(
+        self,
+        text: str,
+        orientation: str = DEFAULT_PAGE_LAYOUT,
+        *,
+        page_layout: str | None = None,
+    ) -> str:
+        """Convert Markdown into a complete, styled HTML5 document.
+
+        ``orientation`` (or its alias ``page_layout``) selects the print CSS:
+        ``"portrait"`` (default) or ``"landscape"``.
+        """
         if not text.strip():
             return ""
 
+        selected_orientation = self._normalize_orientation(
+            page_layout if page_layout is not None else orientation
+        )
         text, front_matter = self._parse_front_matter(text)
         text = self._replace_escapes(text)
         text, footnotes = self._extract_footnotes(text)
 
         lines = text.split("\n")
         html_lines: list[str] = []
+        used_heading_ids: set[str] = set()
 
         in_blockquote = False
         in_code_block = in_table = in_def_list = False
@@ -902,10 +969,15 @@ class MarkdownToHTML:
                 level = len(hashes)
 
                 id_match = re.search(r"\s+\{#([a-zA-Z0-9_-]+)\}$", title)
-                id_attr = ""
                 if id_match:
-                    id_attr = f' id="{id_match.group(1)}"'
+                    heading_id = id_match.group(1)
                     title = title[: id_match.start()]
+                    used_heading_ids.add(heading_id)
+                else:
+                    heading_id = self._unique_heading_id(
+                        self._heading_slug(title), used_heading_ids
+                    )
+                id_attr = f' id="{heading_id}"'
 
                 lang_attr = self._lang_attr(block_lang)
                 title = self._apply_inline_rules(title)
@@ -929,183 +1001,198 @@ class MarkdownToHTML:
 
         final_html = "\n".join(html_lines)
         final_html = self._restore_escapes(final_html)
-        if front_matter or include_css:
-            return self._build_document(final_html, front_matter, include_css)
-        return final_html
+        return self._build_document(final_html, front_matter, selected_orientation)
 
 
-MarkdownToHTML.DOCUMENT_CSS = """body {
-  padding: 20px;
-  font-family: "Noto Serif", "Liberation Serif", "Times New Roman", Times, serif;
-  font-size: 18px;
-  line-height: 1.4;
-  color: #000000;
-  background-color: #ffffff;
+MarkdownToHTML.DOCUMENT_CSS = r"""/* Base Rules */
+:root {
+  --bg-page: #ffffff;
+  --bg-subtle: #f5f5f5;
+  --bg-row-even: #fafafa;
+  --text-main: #000000;
+  --text-muted: #525252;
+  --border-color: #000000;
+  --border-subtle: #e0e0e0;
+  --accent-mark: #ffff00;
+  --font-serif: "Noto Serif", "Liberation Serif", "Times New Roman", serif;
+  --font-sans: "Noto Sans", "Liberation Sans", Arial, sans-serif;
+  --font-mono: "Noto Sans Mono", "Liberation Mono", monospace;
+  --radius-sm: 4px;
+  --space-base: 24px;
+  --code-padding-x: 16px;
+  --print-header: none;
 }
-h1 {
-  margin-top: 1.2em;
-  margin-bottom: 0.6em;
-  font-family: "Noto Sans", "Liberation Sans", Arial, sans-serif;
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  padding: var(--space-base) var(--space-base) var(--space-base) calc(var(--space-base) * 2);
+  font-family: var(--font-serif);
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--text-main);
+  background-color: var(--bg-page);
+}
+h1, h2, h3, h4, h5, h6 {
+  margin: 1.3em 0 0.5em;
+  font-family: var(--font-sans);
   font-weight: bold;
-  font-size: 32px;
-  hyphens: auto;
-  word-break: normal;
+  line-height: 1.25;
   overflow-wrap: break-word;
-  text-wrap: balance;
 }
-h2 {
-  margin-top: 1.2em;
-  margin-bottom: 0.6em;
-  font-family: "Noto Sans", "Liberation Sans", Arial, sans-serif;
-  font-weight: bold;
-  font-size: 28px;
-  hyphens: auto;
-  word-break: normal;
-  overflow-wrap: break-word;
-  text-wrap: balance;
-}
+h1 { font-size: 28px; margin-top: 0; }
+h2 { font-size: 24px; }
 h2#toc { font-style: italic; }
-h3 {
-  margin-top: 1.2em;
-  margin-bottom: 0.6em;
-  font-family: "Noto Sans", "Liberation Sans", Arial, sans-serif;
-  font-weight: bold;
-  font-size: 24px;
-  hyphens: auto;
-  word-break: normal;
-  overflow-wrap: break-word;
-  text-wrap: balance;
-}
-h4 {
-  margin-top: 1.2em;
-  margin-bottom: 0.6em;
-  font-family: "Noto Sans", "Liberation Sans", Arial, sans-serif;
-  font-weight: bold;
-  font-size: 20px;
-  hyphens: auto;
-  word-break: normal;
-  overflow-wrap: break-word;
-  text-wrap: balance;
-}
-h5 {
-  margin-top: 1.2em;
-  margin-bottom: 0.6em;
-  font-family: "Noto Sans", "Liberation Sans", Arial, sans-serif;
-  font-weight: bold;
-  font-size: 18px;
-  hyphens: auto;
-  word-break: normal;
-  overflow-wrap: break-word;
-  text-wrap: balance;
-}
-h6 {
-  margin-top: 1.2em;
-  margin-bottom: 0.6em;
-  font-family: "Noto Sans", "Liberation Sans", Arial, sans-serif;
-  font-weight: bold;
-  font-size: 18px;
-  font-style: italic;
-  hyphens: auto;
-  word-break: normal;
-  overflow-wrap: break-word;
-  text-wrap: balance;
-}
+h3 { font-size: 20px; }
+h4 { font-size: 18px; }
+h5 { font-size: 16px; }
+h6 { font-size: 16px; font-style: italic; }
 p {
-  hyphens: auto;
-  hyphenate-limit-chars: 6 3 3;
-  word-break: normal;
+  margin: 0.9em 0;
   overflow-wrap: break-word;
 }
 hr {
-  height: 4px;
-  margin: 20px 0;
+  height: 2px;
+  margin: 24px 0;
   border: none;
-  background-color: #000000;
+  background-color: var(--border-color);
 }
 blockquote {
-  margin-left: 0;
-  padding-left: 20px;
-  border-left: 8px solid #f5f5f5;
-  hyphens: auto;
-  hyphenate-limit-chars: 6 3 3;
-  word-break: normal;
+  margin: 1.2em 0;
+  padding: 12px 20px;
+  border-left: 4px solid var(--border-color);
+  background-color: var(--bg-subtle);
+  font-style: italic;
   overflow-wrap: break-word;
 }
+blockquote > :first-child { margin-top: 0; }
+blockquote > :last-child { margin-bottom: 0; }
 mark {
-  padding: 0 2px;
-  border-radius: 4px;
-  background-color: #ffff00;
-  color: #000000;
+  padding: 2px 5px;
+  border-radius: var(--radius-sm);
+  background-color: var(--accent-mark);
+  color: var(--text-main);
 }
-a:link { color: #0000cd; }
+a:link { color: #0000cd; text-underline-offset: 2px; }
 a:visited { color: #9400d3; }
-a:hover { outline: none; color: #000080; }
-a:focus { outline: none; color: #000080; }
+a:hover, a:focus { outline: none; color: #000080; }
 a:active { color: #dc143c; }
-ol {
-  hyphens: auto;
-  hyphenate-limit-chars: 6 3 3;
-  word-break: normal;
+ol, ul {
+  margin: 1em 0;
+  padding-left: 0;
+  list-style: none;
   overflow-wrap: break-word;
 }
-ul {
-  hyphens: auto;
-  hyphenate-limit-chars: 6 3 3;
-  word-break: normal;
-  overflow-wrap: break-word;
+li > ol, li > ul {
+  margin: 0.4em 0 0.5em;
+  padding-left: 22px;
+}
+li > ol:last-child, li > ul:last-child {
+  margin-bottom: 0;
+}
+ol {
+  counter-reset: custom-counter;
 }
 li {
   position: relative;
-  padding-left: 20px;
-  hyphens: auto;
-  hyphenate-limit-chars: 6 3 3;
-  word-break: normal;
+  padding-left: 26px;
+  margin-bottom: 0.4em;
   overflow-wrap: break-word;
 }
-ol li input[type="checkbox"], ul li input[type="checkbox"] {
-  vertical-align: baseline;
-  accent-color: #000000;
-  opacity: 1;
-  cursor: not-allowed;
+li:last-child {
+  margin-bottom: 0;
 }
+ul > li::before {
+  content: "•";
+  position: absolute;
+  left: 8px;
+  top: 0;
+}
+ul ul > li::before { content: "◦"; }
+ul ul ul > li::before { content: "▪"; }
+ul.task-list > li,
+ul > li:has(input[type="checkbox"]) {
+  padding-left: 4px;
+}
+ul.task-list > li::before,
+ul > li:has(input[type="checkbox"])::before {
+  display: none;
+}
+ol > li {
+  counter-increment: custom-counter;
+}
+ol > li::before {
+  content: counter(custom-counter) ".";
+  position: absolute;
+  left: 0;
+  top: 0;
+  font-variant-numeric: tabular-nums;
+}
+ol ol > li::before { content: counter(custom-counter, lower-alpha) "."; }
+ol ol ol > li::before { content: counter(custom-counter, lower-roman) "."; }
+ol li input[type="checkbox"],
+ul li input[type="checkbox"] {
+  position: static;
+  display: inline-block;
+  width: 15px;
+  height: 15px;
+  margin: 0 8px 0 0;
+  vertical-align: -2px;
+  accent-color: var(--text-main);
+}
+dl { margin: 1.2em 0; }
 dt {
+  margin-top: 0.9em;
   font-weight: bold;
-  hyphens: auto;
-  word-break: break-word;
   overflow-wrap: anywhere;
 }
 dd {
-  position: relative;
-  margin-left: 0;
-  padding-left: 20px;
+  margin: 0.25em 0 0;
+  padding-left: 14px;
+  border-left: 2px solid var(--border-subtle);
   font-style: italic;
-  hyphens: auto;
-  hyphenate-limit-chars: 6 3 3;
-  word-break: normal;
   overflow-wrap: break-word;
 }
 code {
-  padding: 2px 4px;
-  border-radius: 4px;
-  font-family: "Noto Sans Mono", "Liberation Mono", "Courier New", Courier, monospace;
-  font-size: 0.9em;
+  padding: 2px 5px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background-color: var(--bg-subtle);
+  font-family: var(--font-mono);
+  font-size: 0.88em;
   line-height: 1;
-  hyphens: none !important;
-  white-space: normal;
-  word-break: break-all;
   overflow-wrap: anywhere;
 }
+div.code-lang {
+  display: block;
+  width: fit-content;
+  position: relative;
+  z-index: 2;
+  margin: 1.2em calc(var(--code-padding-x) + 1px) -10px auto;
+  padding: 3px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: 0.8em;
+  font-weight: bold;
+  line-height: 1;
+  background-color: var(--text-main);
+  color: var(--bg-page);
+}
 pre {
+  position: relative;
+  z-index: 1;
   max-width: 100%;
-  margin: 0;
-  padding: 20px;
-  border: 1px solid #000000;
-  background-color: #f5f5f5;
-  overflow: auto;
-  scrollbar-color: #000000 transparent;
-  white-space: pre-wrap;
-  word-break: break-all;
-  overflow-wrap: anywhere;
+  margin: 1.2em 0;
+  padding: 16px var(--code-padding-x);
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-subtle);
+  overflow-x: auto;
+}
+div.code-lang + pre {
+  margin-top: 0;
+  padding-top: 22px;
 }
 pre > code {
   display: block;
@@ -1113,46 +1200,236 @@ pre > code {
   padding: 0;
   border: none;
   border-radius: 0;
-  line-height: 1.2;
+  line-height: 1.45;
   background-color: transparent;
-  overflow: visible;
-  hyphens: none !important;
   white-space: pre;
-  word-break: normal;
   overflow-wrap: normal;
 }
-div.code-lang {
-  display: block;
-  padding: 10px 20px;
-  font-family: "Noto Sans Mono", "Liberation Mono", "Courier New", Courier, monospace;
-  font-size: 0.9em;
-  line-height: 1;
-  background-color: #000000;
-  color: #ffffff;
+table {
+  width: 100%;
+  margin: 1.5em 0;
+  border-collapse: collapse;
+  border: 1px solid var(--border-color);
+}
+th, td {
+  padding: 10px 14px;
+  text-align: left;
+  border: 1px solid var(--border-color);
+  overflow-wrap: anywhere;
+}
+thead tr {
+  background-color: var(--text-main);
+  color: var(--bg-page);
+}
+thead th {
+  font-family: var(--font-sans);
   font-weight: bold;
 }
-table { margin-top: 32pt; border-collapse: collapse; }
-th { padding: 10px 12px; border: 1px solid #000000; font-weight: bold; }
-td { padding: 10px 12px; border: 1px solid #000000; }
-thead tr { background-color: #000000; color: #ffffff; }
-thead th { hyphens: auto; word-break: break-word; overflow-wrap: anywhere; }
-thead td { hyphens: auto; word-break: break-word; overflow-wrap: anywhere; }
-tbody th { hyphens: auto; word-break: break-word; overflow-wrap: anywhere; }
-tbody td { hyphens: auto; word-break: break-word; overflow-wrap: anywhere; }
-tfoot tr { background-color: #f5f5f5; font-style: italic; }
-tfoot th { hyphens: auto; word-break: break-word; overflow-wrap: anywhere; }
-tfoot td { hyphens: auto; word-break: break-word; overflow-wrap: anywhere; }
-figure { display: block; margin: 0; }
-figure img { display: block; max-width: 100%; height: auto; }
-figcaption { text-align: left; font-style: italic; hyphens: auto; hyphenate-limit-chars: 6 3 3; word-break: normal; overflow-wrap: break-word; }
+
+tbody tr:nth-child(even) {
+  background-color: var(--bg-row-even);
+}
+tfoot tr {
+  background-color: var(--bg-subtle);
+  font-style: italic;
+}
+figure {
+  display: block;
+  margin: 1.2em 0;
+}
+figure img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+figcaption {
+  margin-top: 6px;
+  font-size: 0.9em;
+  font-style: italic;
+  color: var(--text-muted);
+  overflow-wrap: break-word;
+}
 ruby { ruby-position: over; ruby-align: space-around; }
-rt { letter-spacing: 0.05em; font-size: 0.55em; line-break: strict; white-space: nowrap; overflow-wrap: normal; }
+rt { letter-spacing: 0.05em; font-size: 0.55em; white-space: nowrap; }
 rp { display: none; }
-span[lang="ja"] { font-family: "Noto Serif CJK JP", "Source Han Serif JP", "源ノ明朝", "Source Han Serif", "Hiragino Mincho ProN", "Hiragino Mincho Pro", "IPAexMincho", "IPAMincho", "MS PMincho", "MS Mincho", serif; word-break: break-all; line-break: normal; }
-span[lang="zh-CN"] { font-family: "Noto Serif CJK SC", "Source Han Serif SC", "思源宋体", "Source Han Serif CN", "Source Han Serif", "Songti SC", "FandolSong", "WenQuanYi Bitmap Song", "SimSun", serif; word-break: break-all; line-break: normal; }
-span[lang="zh-Hans"] { font-family: "Noto Serif CJK SC", "Source Han Serif SC", "思源宋体", "Source Han Serif CN", "Source Han Serif", "Songti SC", "FandolSong", "WenQuanYi Bitmap Song", "SimSun", serif; word-break: break-all; line-break: normal; }
-span[lang="zh-TW"] { font-family: "Noto Serif CJK TC", "Source Han Serif TC", "思源宋體", "Source Han Serif TW", "Source Han Serif", "Apple LiSung", "LiSong Pro", "HanaMinA", "PMingLiU", "MingLiU", serif; word-break: break-all; line-break: normal; }
-span[lang="zh-Hant"] { font-family: "Noto Serif CJK TC", "Source Han Serif TC", "思源宋體", "Source Han Serif TW", "Source Han Serif", "Apple LiSung", "LiSong Pro", "HanaMinA", "PMingLiU", "MingLiU", serif; word-break: break-all; line-break: normal; }
-span[lang="zh-HK"] { font-family: "Noto Serif CJK HK", "Source Han Serif HK", "思源宋體 香港", "思源宋體", "Source Han Serif", "Apple LiSung", "LiSong Pro", "HanaMinA", "MingLiU_HKSCS", "PMingLiU", "MingLiU", serif; word-break: break-all; line-break: normal; }
-span[lang="ko"] { font-family: "Noto Serif CJK KR", "Source Han Serif KR", "본명조", "Source Han Serif", "AppleMyungjo", "UnBatang", "은바탕", "Batang", serif; word-break: break-all; line-break: normal; }
+span[lang="ja"] { font-family: "Noto Serif CJK JP", "Source Han Serif JP", serif; }
+span[lang="zh-CN"], span[lang="zh-Hans"] { font-family: "Noto Serif CJK SC", "Source Han Serif SC", serif; }
+span[lang="zh-TW"], span[lang="zh-Hant"] { font-family: "Noto Serif CJK TC", "Source Han Serif TC", serif; }
+span[lang="zh-HK"] { font-family: "Noto Serif CJK HK", "Source Han Serif HK", serif; }
+span[lang="ko"] { font-family: "Noto Serif CJK KR", "Source Han Serif KR", serif; }
+"""
+
+MarkdownToHTML.PORTRAIT_CSS = r"""/* Portrait PDF/Print */
+@page {
+  size: A4 portrait;
+  margin: 22mm 15mm 20mm 25mm;
+  @top-center {
+    content: var(--print-header);
+    font-family: var(--font-sans);
+    font-size: 8.5pt;
+    color: var(--text-muted);
+    vertical-align: bottom;
+    padding-bottom: 6pt;
+    border-bottom: 0.5pt solid var(--border-subtle);
+  }
+  @bottom-center {
+    content: counter(page);
+    font-family: var(--font-sans);
+    font-size: 8.5pt;
+    color: var(--text-muted);
+    vertical-align: top;
+    padding-top: 6pt;
+  }
+}
+@media print {
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  body {
+    padding: 0;
+    font-size: 11pt;
+    line-height: 1.45;
+    color: #000000;
+    background-color: #ffffff;
+  }
+  h1 { font-size: 20pt; }
+  h2 { font-size: 17pt; }
+  h3 { font-size: 14.5pt; }
+  h4 { font-size: 12.5pt; }
+  h5, h6 { font-size: 11pt; }
+  h1, h2, h3, h4, h5, h6, dt, div.code-lang {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+  blockquote, figure, pre, tr {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  p, li {
+    orphans: 3;
+    widows: 3;
+  }
+  pre {
+    overflow: visible;
+  }
+  pre > code {
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
+  }
+  thead {
+    display: table-header-group;
+  }
+  tfoot {
+    display: table-footer-group;
+  }
+  a:link, a:visited {
+    color: #000000;
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+  }
+  a[href^="http"]::after {
+    content: " (" attr(href) ")";
+    font-family: var(--font-mono);
+    font-size: 0.85em;
+    color: var(--text-muted);
+    word-break: break-all;
+  }
+}
+"""
+
+MarkdownToHTML.LANDSCAPE_CSS = r"""/* Landscape PDF/Print */
+@page {
+  size: A4 landscape;
+  margin: 16mm 16mm 16mm 32mm;
+  @top-center {
+    content: var(--print-header);
+    font-family: var(--font-sans);
+    font-size: 8.5pt;
+    color: var(--text-muted);
+    vertical-align: bottom;
+    padding-bottom: 5pt;
+    border-bottom: 0.5pt solid var(--border-subtle);
+  }
+  @bottom-center {
+    content: counter(page);
+    font-family: var(--font-sans);
+    font-size: 8.5pt;
+    color: var(--text-muted);
+    vertical-align: top;
+    padding-top: 5pt;
+  }
+}
+@media print {
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  body {
+    padding: 0;
+    font-size: 11pt;
+    line-height: 1.45;
+    color: #000000;
+    background-color: #ffffff;
+  }
+  h1 { font-size: 20pt; }
+  h2 { font-size: 17pt; }
+  h3 { font-size: 14.5pt; }
+  h4 { font-size: 12.5pt; }
+  h5, h6 { font-size: 11pt; }
+  h1, h2, h3, h4, h5, h6, dt, div.code-lang {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+  blockquote, figure, pre, tr {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  p, li {
+    orphans: 3;
+    widows: 3;
+  }
+  pre {
+    overflow: visible;
+  }
+  pre > code {
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
+  }
+  thead {
+    display: table-header-group;
+  }
+  tfoot {
+    display: table-footer-group;
+  }
+  a:link, a:visited {
+    color: #000000;
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+  }
+  a[href^="http"]::after {
+    content: " (" attr(href) ")";
+    font-family: var(--font-mono);
+    font-size: 0.85em;
+    color: var(--text-muted);
+    word-break: break-all;
+  }
+}
+"""
+
+MarkdownToHTML.DOCUMENT_SCRIPT = r"""    <script>
+      (() => {
+        const author = document.querySelector('meta[name="author"]')?.content.trim() || '';
+        const title = document.title.trim() || '';
+        const published = document.querySelector('meta[name="published"], meta[name="date"]')?.content.trim() || '';
+
+        const base = [author, title].filter(Boolean).join(', ');
+        const headerText = published ? (base ? `${base} (${published})` : published) : base;
+
+        if (headerText) {
+          const safeText = headerText.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+          document.documentElement.style.setProperty('--print-header', `"${safeText}"`);
+        }
+      })();
+    </script>
 """

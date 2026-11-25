@@ -1,8 +1,18 @@
 """End-to-end tests for the Markdown to HTML5 conversion rules."""
 
+import subprocess
+import sys
+
 import pytest
 
 from markdown2html5_base.converter import MarkdownToHTML
+
+
+def body(html: str) -> str:
+    """Return the document body content before the injected header script."""
+    if not html:
+        return ""
+    return html.split("  <body>\n", 1)[1].rsplit("\n    <script>", 1)[0]
 
 
 @pytest.fixture
@@ -20,59 +30,68 @@ def test_footnotes(converter):
         '    <li id="fn:1">Footnote body <a href="#fnref:1" class="footnote-backref">&uarr;</a></li>\n'
         "  </ol>\n</div>"
     )
-    assert converter.convert(md_text) == expected
+    assert body(converter.convert(md_text)) == expected
 
 
 def test_empty_input(converter):
     """Verify that completely empty strings or blank space entries safely return an empty string."""
-    assert converter.convert("") == ""
-    assert converter.convert("   \n  ") == ""
+    assert body(converter.convert("")) == ""
+    assert body(converter.convert("   \n  ")) == ""
 
 
 def test_headings_and_ids(converter):
-    """Verify that standard block headings render correctly with optional custom layout ID attributes."""
-    assert converter.convert("# Heading 1") == "<h1>Heading 1</h1>"
-    assert converter.convert("### Title {#custom}") == '<h3 id="custom">Title</h3>'
+    """Verify auto-generated heading anchors and optional custom layout IDs."""
+    assert body(converter.convert("# Heading 1")) == '<h1 id="heading-1">Heading 1</h1>'
+    assert (
+        body(converter.convert("### Title {#custom}")) == '<h3 id="custom">Title</h3>'
+    )
+    assert (
+        body(converter.convert("## 1. Headings (H1-H6)"))
+        == '<h2 id="1-headings-h1-h6">1. Headings (H1-H6)</h2>'
+    )
 
 
 def test_basic_inline_styles(converter):
     """Verify that core markdown inline styles transform into clean HTML markup elements."""
-    assert converter.convert("**bold**") == "<p><strong>bold</strong></p>"
-    assert converter.convert("*italic*") == "<p><em>italic</em></p>"
-    assert converter.convert("~~strikeout~~") == "<p><s>strikeout</s></p>"
-    assert converter.convert("`code`") == "<p><code>code</code></p>"
+    assert body(converter.convert("**bold**")) == "<p><strong>bold</strong></p>"
+    assert body(converter.convert("*italic*")) == "<p><em>italic</em></p>"
+    assert body(converter.convert("~~strikeout~~")) == "<p><s>strikeout</s></p>"
+    assert body(converter.convert("`code`")) == "<p><code>code</code></p>"
 
 
 def test_inline_code_escapes_html_tags(converter):
     """Verify that explicit HTML syntax characters located inside code tags are securely escaped."""
-    assert converter.convert("`<title>`") == "<p><code>&lt;title&gt;</code></p>"
-    assert converter.convert("`<textarea>`") == "<p><code>&lt;textarea&gt;</code></p>"
-    assert converter.convert("`<style>`") == "<p><code>&lt;style&gt;</code></p>"
-    assert converter.convert("`<script>`") == "<p><code>&lt;script&gt;</code></p>"
-    assert converter.convert("`<h1>Heading</h1>`") == (
+    assert body(converter.convert("`<title>`")) == "<p><code>&lt;title&gt;</code></p>"
+    assert (
+        body(converter.convert("`<textarea>`"))
+        == "<p><code>&lt;textarea&gt;</code></p>"
+    )
+    assert body(converter.convert("`<style>`")) == "<p><code>&lt;style&gt;</code></p>"
+    assert body(converter.convert("`<script>`")) == "<p><code>&lt;script&gt;</code></p>"
+    assert body(converter.convert("`<h1>Heading</h1>`")) == (
         "<p><code>&lt;h1&gt;Heading&lt;/h1&gt;</code></p>"
     )
-    assert converter.convert("Use `<b>bold</b>` and `<!--x-->` here") == (
+    assert body(converter.convert("Use `<b>bold</b>` and `<!--x-->` here")) == (
         "<p>Use <code>&lt;b&gt;bold&lt;/b&gt;</code> "
         "and <code>&lt;!--x--&gt;</code> here</p>"
     )
-    assert converter.convert("`[text](url)` and `**not bold**`") == (
+    assert body(converter.convert("`[text](url)` and `**not bold**`")) == (
         "<p><code>[text](url)</code> and <code>**not bold**</code></p>"
     )
 
 
 def test_images(converter):
     """Verify that markdown image blocks map cleanly into standalone layout figure tags."""
-    assert converter.convert('![Markdown](./mark_editor.png "Title")') == (
+    assert body(converter.convert('![Markdown](./mark_editor.png "Title")')) == (
         "<figure>\n"
         '  <img src="./mark_editor.png" alt="Markdown" title="Title">\n'
         "  <figcaption>Title</figcaption>\n"
         "</figure>"
     )
-    assert converter.convert("![alt](src)") == (
+    assert body(converter.convert("![alt](src)")) == (
         '<figure>\n  <img src="src" alt="alt">\n</figure>'
     )
-    assert converter.convert("![alt](src 'Title')") == (
+    assert body(converter.convert("![alt](src 'Title')")) == (
         "<figure>\n"
         '  <img src="src" alt="alt" title="Title">\n'
         "  <figcaption>Title</figcaption>\n"
@@ -86,36 +105,38 @@ def test_links_keep_underscores_verbatim(converter):
     The emphasis pass must never consume the `_` characters of a URL such as
     `target_x`, which previously produced a `</em>` inside the `href`.
     """
-    assert converter.convert("[link_text](target_x)") == (
+    assert body(converter.convert("[link_text](target_x)")) == (
         '<p><a href="target_x">link_text</a></p>'
     )
-    assert converter.convert("[ext](http://e.com/a_b_c)") == (
+    assert body(converter.convert("[ext](http://e.com/a_b_c)")) == (
         '<p><a href="http://e.com/a_b_c">ext</a></p>'
     )
-    assert converter.convert("[one](a_b) [two](c_d)") == (
+    assert body(converter.convert("[one](a_b) [two](c_d)")) == (
         '<p><a href="a_b">one</a> <a href="c_d">two</a></p>'
     )
-    assert converter.convert("[Jump](#sec_one)") == (
+    assert body(converter.convert("[Jump](#sec_one)")) == (
         '<p><a href="#sec_one">Jump</a></p>'
     )
 
 
 def test_links_keep_asterisks_verbatim(converter):
     """Verify that asterisks in a link destination are not treated as emphasis markers."""
-    assert converter.convert("[a](http://e.com/a*b*c)") == (
+    assert body(converter.convert("[a](http://e.com/a*b*c)")) == (
         '<p><a href="http://e.com/a*b*c">a</a></p>'
     )
-    assert converter.convert("[a](http://e.com/x_y*z)") == (
+    assert body(converter.convert("[a](http://e.com/x_y*z)")) == (
         '<p><a href="http://e.com/x_y*z">a</a></p>'
     )
 
 
 def test_underscore_emphasis_does_not_cross_link_syntax(converter):
     """Verify that an emphasis pair may span a link without corrupting its URL."""
-    assert converter.convert("_see [link](http://e.com/a_b) now_") == (
+    assert body(converter.convert("_see [link](http://e.com/a_b) now_")) == (
         '<p><em>see <a href="http://e.com/a_b">link</a> now</em></p>'
     )
-    assert converter.convert("*[x](a_b)*") == '<p><em><a href="a_b">x</a></em></p>'
+    assert (
+        body(converter.convert("*[x](a_b)*")) == '<p><em><a href="a_b">x</a></em></p>'
+    )
 
 
 def test_intraword_underscores_are_literal(converter):
@@ -124,45 +145,45 @@ def test_intraword_underscores_are_literal(converter):
     This follows the CommonMark rule for `_`, so identifiers such as
     `snake_case_name` and `a_b_c` survive conversion unchanged.
     """
-    assert converter.convert("snake_case_name and a_b_c") == (
+    assert body(converter.convert("snake_case_name and a_b_c")) == (
         "<p>snake_case_name and a_b_c</p>"
     )
-    assert converter.convert("_italic_ stays, snake_case_name does not") == (
+    assert body(converter.convert("_italic_ stays, snake_case_name does not")) == (
         "<p><em>italic</em> stays, snake_case_name does not</p>"
     )
-    assert converter.convert("__bold__ and intraword__bold__here") == (
+    assert body(converter.convert("__bold__ and intraword__bold__here")) == (
         "<p><strong>bold</strong> and intraword__bold__here</p>"
     )
-    assert converter.convert("a_b_c and d_e_f") == "<p>a_b_c and d_e_f</p>"
+    assert body(converter.convert("a_b_c and d_e_f")) == "<p>a_b_c and d_e_f</p>"
 
 
 def test_link_with_title(converter):
     """Verify that an optional link title becomes a `title` attribute, not part of the URL."""
-    assert converter.convert('[text](http://e.com "Title")') == (
+    assert body(converter.convert('[text](http://e.com "Title")')) == (
         '<p><a href="http://e.com" title="Title">text</a></p>'
     )
-    assert converter.convert("[text](http://e.com 'Title')") == (
+    assert body(converter.convert("[text](http://e.com 'Title')")) == (
         '<p><a href="http://e.com" title="Title">text</a></p>'
     )
 
 
 def test_link_with_balanced_parentheses_in_url(converter):
     """Verify that balanced parentheses inside a destination are preserved."""
-    assert converter.convert("[text](http://e.com/a_(b))") == (
+    assert body(converter.convert("[text](http://e.com/a_(b))")) == (
         '<p><a href="http://e.com/a_(b)">text</a></p>'
     )
 
 
 def test_link_with_angle_bracket_url(converter):
     """Verify that an angle-bracketed destination keeps spaces and is unbracketed."""
-    assert converter.convert("[text](<http://e.com/a b>)") == (
+    assert body(converter.convert("[text](<http://e.com/a b>)")) == (
         '<p><a href="http://e.com/a b">text</a></p>'
     )
 
 
 def test_link_label_with_nested_brackets(converter):
     """Verify that balanced brackets inside a label do not truncate it."""
-    assert converter.convert("[text [with] brackets](url)") == (
+    assert body(converter.convert("[text [with] brackets](url)")) == (
         '<p><a href="url">text [with] brackets</a></p>'
     )
 
@@ -181,19 +202,23 @@ def test_footnote_marker_with_underscore(converter):
         "  </ol>\n"
         "</div>"
     )
-    assert converter.convert(md_text) == expected
+    assert body(converter.convert(md_text)) == expected
 
 
 def test_multiline_paragraphs_and_breaks(converter):
     """Verify that standard multi-line structures and explicit line break symbols compile seamlessly."""
     md_text = "Line one\nLine two"
-    assert converter.convert(md_text) == "<p>Line one\nLine two</p>"
+    assert body(converter.convert(md_text)) == "<p>Line one\nLine two</p>"
 
     md_break_spaces = "Break here  \nNext line"
-    assert converter.convert(md_break_spaces) == "<p>Break here<br />\nNext line</p>"
+    assert (
+        body(converter.convert(md_break_spaces)) == "<p>Break here<br />\nNext line</p>"
+    )
 
     md_break_slash = "Break here\\\nNext line"
-    assert converter.convert(md_break_slash) == "<p>Break here<br />\nNext line</p>"
+    assert (
+        body(converter.convert(md_break_slash)) == "<p>Break here<br />\nNext line</p>"
+    )
 
 
 def test_lists_and_empty_line_comments(converter):
@@ -204,25 +229,25 @@ def test_lists_and_empty_line_comments(converter):
         "<!-- -->\n"
         "<ol>\n  <li>First</li>\n  <li>Second</li>\n</ol>"
     )
-    assert converter.convert(md_lists) == expected
+    assert body(converter.convert(md_lists)) == expected
 
 
 def test_task_lists(converter):
     """Verify that checklist syntax variations produce operational checkbox inputs with disabled states."""
     assert (
-        converter.convert("- [x] Done")
+        body(converter.convert("- [x] Done"))
         == '<ul>\n  <li><input type="checkbox" checked disabled> Done</li>\n</ul>'
     )
     assert (
-        converter.convert("- [ ] Todo")
+        body(converter.convert("- [ ] Todo"))
         == '<ul>\n  <li><input type="checkbox" disabled> Todo</li>\n</ul>'
     )
     assert (
-        converter.convert("1. [x] Done")
+        body(converter.convert("1. [x] Done"))
         == '<ol>\n  <li><input type="checkbox" checked disabled> Done</li>\n</ol>'
     )
     assert (
-        converter.convert("1. [ ] Todo")
+        body(converter.convert("1. [ ] Todo"))
         == '<ol>\n  <li><input type="checkbox" disabled> Todo</li>\n</ol>'
     )
 
@@ -230,7 +255,11 @@ def test_task_lists(converter):
 def test_nested_list_same_type(converter):
     """Verify that an indented bullet list nests inside the parent <li>."""
     assert (
-        converter.convert("- Item 1\n- Item 2\n  - Subitem 1\n  - Subitem 2\n- Item 3")
+        body(
+            converter.convert(
+                "- Item 1\n- Item 2\n  - Subitem 1\n  - Subitem 2\n- Item 3"
+            )
+        )
         == "<ul>\n"
         "  <li>Item 1</li>\n"
         "  <li>Item 2\n"
@@ -247,8 +276,10 @@ def test_nested_list_same_type(converter):
 def test_nested_list_different_type(converter):
     """Verify that an indented ordered list nests inside a bullet parent."""
     assert (
-        converter.convert(
-            "- Item 1\n- Item 2\n  1. Subitem 1\n  2. Subitem 2\n- Item 3"
+        body(
+            converter.convert(
+                "- Item 1\n- Item 2\n  1. Subitem 1\n  2. Subitem 2\n- Item 3"
+            )
         )
         == "<ul>\n"
         "  <li>Item 1</li>\n"
@@ -266,8 +297,10 @@ def test_nested_list_different_type(converter):
 def test_nested_list_mixed_types(converter):
     """Verify that alternating nested types render as sibling nested lists."""
     assert (
-        converter.convert(
-            "- Item 1\n- Item 2\n  1. Subitem 1\n  2. Subitem 2\n  - Subitem 3\n- Item 3"
+        body(
+            converter.convert(
+                "- Item 1\n- Item 2\n  1. Subitem 1\n  2. Subitem 2\n  - Subitem 3\n- Item 3"
+            )
         )
         == "<ul>\n"
         "  <li>Item 1</li>\n"
@@ -288,7 +321,11 @@ def test_nested_list_mixed_types(converter):
 def test_nested_list_checkboxes(converter):
     """Verify that indented checklist items keep their checkbox inputs."""
     assert (
-        converter.convert("- Task A\n- Task B\n  - [x] Done\n  - [ ] Todo\n- Task C")
+        body(
+            converter.convert(
+                "- Task A\n- Task B\n  - [x] Done\n  - [ ] Todo\n- Task C"
+            )
+        )
         == "<ul>\n"
         "  <li>Task A</li>\n"
         "  <li>Task B\n"
@@ -305,14 +342,16 @@ def test_nested_list_checkboxes(converter):
 def test_triple_nested_list(converter):
     """Verify that a third indentation level nests a list inside a second-level <li>."""
     assert (
-        converter.convert(
-            "- Item 1\n"
-            "- Item 2\n"
-            "  - Sub 1\n"
-            "    - Subsub 1\n"
-            "    - Subsub 2\n"
-            "  - Sub 2\n"
-            "- Item 3"
+        body(
+            converter.convert(
+                "- Item 1\n"
+                "- Item 2\n"
+                "  - Sub 1\n"
+                "    - Subsub 1\n"
+                "    - Subsub 2\n"
+                "  - Sub 2\n"
+                "- Item 3"
+            )
         )
         == "<ul>\n"
         "  <li>Item 1</li>\n"
@@ -335,8 +374,10 @@ def test_triple_nested_list(converter):
 def test_triple_nested_list_with_type_switch(converter):
     """Verify that a deep nested list may switch type at any depth."""
     assert (
-        converter.convert(
-            "- Item 1\n- Item 2\n  1. Sub 1\n    - Subsub 1\n  2. Sub 2\n- Item 3"
+        body(
+            converter.convert(
+                "- Item 1\n- Item 2\n  1. Sub 1\n    - Subsub 1\n  2. Sub 2\n- Item 3"
+            )
         )
         == "<ul>\n"
         "  <li>Item 1</li>\n"
@@ -361,41 +402,41 @@ def test_blockquotes(converter):
     expected = (
         "<blockquote>\n  <p>First para.</p>\n  <p>Second para.</p>\n</blockquote>"
     )
-    assert converter.convert(md_quote) == expected
+    assert body(converter.convert(md_quote)) == expected
 
 
 def test_ruby_rule(converter):
     """Verify that custom shorthand markup strings produce operational semantic ruby elements."""
     assert (
-        converter.convert("{漢|かん}")
+        body(converter.convert("{漢|かん}"))
         == "<p><ruby>漢<rp>(</rp><rt>かん</rt><rp>)</rp></ruby></p>"
     )
 
 
 def test_typography_and_math(converter):
     """Verify that complex shorthand sequences safely translate into appropriate HTML core layout entities."""
-    assert converter.convert("(c) 2026...") == "<p>&copy; 2026&hellip;</p>"
-    assert converter.convert("1/2 != 3/4") == "<p>&frac12; &ne; &frac34;</p>"
-    assert converter.convert('"Hello" and <<World>>') == (
+    assert body(converter.convert("(c) 2026...")) == "<p>&copy; 2026&hellip;</p>"
+    assert body(converter.convert("1/2 != 3/4")) == "<p>&frac12; &ne; &frac34;</p>"
+    assert body(converter.convert('"Hello" and <<World>>')) == (
         "<p>&ldquo;Hello&rdquo; and &laquo;World&raquo;</p>"
     )
-    assert converter.convert("&sol; &bsol;") == "<p>&sol; &bsol;</p>"
-    assert converter.convert("a &nbsp; b") == "<p>a &nbsp; b</p>"
+    assert body(converter.convert("&sol; &bsol;")) == "<p>&sol; &bsol;</p>"
+    assert body(converter.convert("a &nbsp; b")) == "<p>a &nbsp; b</p>"
 
 
 def test_typography_arrows(converter):
     """Verify that structural geometric shorthand configurations generate standard numeric vector arrows."""
-    assert converter.convert("a -> b") == "<p>a &rarr; b</p>"
-    assert converter.convert("a <- b") == "<p>a &larr; b</p>"
-    assert converter.convert("a <=> b") == "<p>a &hArr; b</p>"
-    assert converter.convert("a => b") == "<p>a &rArr; b</p>"
-    assert converter.convert("up &uarr; down &darr;") == (
+    assert body(converter.convert("a -> b")) == "<p>a &rarr; b</p>"
+    assert body(converter.convert("a <- b")) == "<p>a &larr; b</p>"
+    assert body(converter.convert("a <=> b")) == "<p>a &hArr; b</p>"
+    assert body(converter.convert("a => b")) == "<p>a &rArr; b</p>"
+    assert body(converter.convert("up &uarr; down &darr;")) == (
         "<p>up &uarr; down &darr;</p>"
     )
 
 
 def test_front_matter_full_document(converter):
-    """Verify that comprehensive meta structures construct a complete document when full styling is active."""
+    """Verify that metadata, portrait CSS and the header script form a complete document."""
     md_text = (
         "---\n"
         "lang: en\n"
@@ -408,6 +449,7 @@ def test_front_matter_full_document(converter):
         "# Hello\n"
         "Body text."
     )
+    script = MarkdownToHTML.DOCUMENT_SCRIPT.rstrip("\n")
     expected = (
         "<!doctype html>\n"
         '<html lang="en">\n'
@@ -418,15 +460,16 @@ def test_front_matter_full_document(converter):
         '    <meta name="keywords" content="one, two, three" />\n'
         "    <title>My Document</title>\n"
         '    <meta name="published" content="2026-08-09" />\n'
-        f"    <style>\n{MarkdownToHTML.DOCUMENT_CSS}    </style>\n"
+        f"    <style>\n{MarkdownToHTML._css_for_orientation('portrait')}    </style>\n"
         "  </head>\n"
         "  <body>\n"
-        "<h1>Hello</h1>\n"
+        '<h1 id="hello">Hello</h1>\n'
         "<p>Body text.</p>\n"
+        f"{script}\n"
         "  </body>\n"
         "</html>"
     )
-    assert converter.convert(md_text, include_css=True) == expected
+    assert converter.convert(md_text) == expected
 
 
 def test_front_matter_quoted_values(converter):
@@ -434,103 +477,138 @@ def test_front_matter_quoted_values(converter):
     md_text = (
         "---\ntitle: \"My Document\"\ndescription: 'A short description.'\n---\nBody"
     )
-    expected = (
-        "<!doctype html>\n"
-        "<html>\n"
-        "  <head>\n"
-        '    <meta charset="utf-8" />\n'
-        '    <meta name="description" content="A short description." />\n'
-        "    <title>My Document</title>\n"
-        "  </head>\n"
-        "  <body>\n"
-        "<p>Body</p>\n"
-        "  </body>\n"
-        "</html>"
-    )
-    assert converter.convert(md_text) == expected
-    assert converter.convert(md_text, include_css=False) == expected
+    output = converter.convert(md_text)
+    assert output.startswith("<!doctype html>\n<html>\n")
+    assert '<meta name="description" content="A short description." />' in output
+    assert "<title>My Document</title>" in output
+    assert body(output) == "<p>Body</p>"
 
 
 def test_front_matter_only_lang(converter):
-    """Verify that sparse front matter contexts configure isolated root attribute layers correctly."""
+    """Verify that sparse front matter configures the root language attribute."""
     md_text = "---\nlang: ru\n---\n# Привет"
-    expected = (
-        "<!doctype html>\n"
-        '<html lang="ru">\n'
-        "  <head>\n"
-        '    <meta charset="utf-8" />\n'
-        f"    <style>\n{MarkdownToHTML.DOCUMENT_CSS}    </style>\n"
-        "  </head>\n"
-        "  <body>\n"
-        "<h1>Привет</h1>\n"
-        "  </body>\n"
-        "</html>"
+    output = converter.convert(md_text)
+    assert output.startswith('<!doctype html>\n<html lang="ru">\n')
+    assert (
+        f"<style>\n{MarkdownToHTML._css_for_orientation('portrait')}    </style>"
+        in output
     )
-    assert converter.convert(md_text, include_css=True) == expected
+    assert body(output) == '<h1 id="привет">Привет</h1>'
 
 
-def test_no_front_matter_without_css_returns_fragment(converter):
-    """Verify that a plain markdown string without front matter or CSS returns an isolated HTML fragment."""
-    assert converter.convert("# Hello", include_css=False) == "<h1>Hello</h1>"
-
-
-def test_no_front_matter_with_css_returns_document(converter):
-    """Verify that generating an HTML document embeds the default stylesheet when CSS integration is requested."""
-    output = converter.convert("# Hello", include_css=True)
+def test_no_front_matter_returns_styled_document(converter):
+    """Verify that plain markdown also becomes a full document with CSS and script."""
+    output = converter.convert("# Hello")
     assert output.startswith("<!doctype html>")
-    assert f"<style>\n{MarkdownToHTML.DOCUMENT_CSS}    </style>" in output
-    assert "<h1>Hello</h1>" in output
+    assert (
+        f"<style>\n{MarkdownToHTML._css_for_orientation('portrait')}    </style>"
+        in output
+    )
+    assert MarkdownToHTML.DOCUMENT_SCRIPT.rstrip("\n") in output
+    assert body(output) == '<h1 id="hello">Hello</h1>'
 
 
-def test_front_matter_without_css_omits_style(converter):
-    """Verify that front matter configuration builds a valid structural HTML file but leaves out inline styles."""
+def test_include_css_option_is_removed(converter):
+    """Verify that the old opt-in CSS flag is no longer part of the API."""
+    for value in (True, False):
+        with pytest.raises(TypeError):
+            converter.convert("# Hi", include_css=value)
+
+
+def test_front_matter_always_embeds_style(converter):
+    """Verify that front matter always yields a document with the selected print CSS."""
     md_text = "---\nlang: en\n---\n# Hi"
-    output = converter.convert(md_text, include_css=False)
-    assert "<style>" not in output
-    assert output.startswith("<!doctype html>")
+    output = converter.convert(md_text)
+    assert (
+        f"<style>\n{MarkdownToHTML._css_for_orientation('portrait')}    </style>"
+        in output
+    )
+    assert body(output) == '<h1 id="hi">Hi</h1>'
 
 
-def test_front_matter_with_css_embeds_style(converter):
-    """Verify that providing valid front matter properties alongside an active CSS request embeds the document style block."""
-    md_text = "---\nlang: en\n---\n# Hi"
-    output = converter.convert(md_text, include_css=True)
-    assert f"<style>\n{MarkdownToHTML.DOCUMENT_CSS}    </style>" in output
+def test_portrait_orientation_css(converter):
+    """Verify that the default output uses the portrait print media rules."""
+    output = converter.convert("# Hi")
+    assert "/* Base Rules */" in output
+    assert output.index("/* Base Rules */") < output.index("/* Portrait PDF/Print */")
+    assert "/* Portrait PDF/Print */" in output
+    assert "size: A4 portrait;" in output
+    assert "margin: 22mm 15mm 20mm 25mm;" in output
+    assert "/* Landscape PDF/Print */" not in output
+    assert "size: A4 landscape;" not in output
+
+
+def test_landscape_orientation_css(converter):
+    """Verify that the landscape orientation swaps in the landscape print media rules."""
+    output = converter.convert("# Hi", orientation="landscape")
+    assert "/* Base Rules */" in output
+    assert output.index("/* Base Rules */") < output.index("/* Landscape PDF/Print */")
+    assert "/* Landscape PDF/Print */" in output
+    assert "size: A4 landscape;" in output
+    assert "margin: 16mm 16mm 16mm 32mm;" in output
+    assert "/* Portrait PDF/Print */" not in output
+    assert "size: A4 portrait;" not in output
+
+
+def test_orientation_aliases_and_normalisation(converter):
+    """Verify case-insensitive orientation names and the page_layout alias."""
+    landscape = converter.convert("# Hi", " LANDSCAPE ")
+    assert "/* Landscape PDF/Print */" in landscape
+    assert "/* Landscape PDF/Print */" in converter.convert(
+        "# Hi", page_layout="landscape"
+    )
+
+
+def test_invalid_orientation_is_rejected(converter):
+    """Verify that an unknown orientation is rejected with a helpful message."""
+    with pytest.raises(ValueError, match="portrait, landscape"):
+        converter.convert("# Hi", orientation="square")
+
+
+def test_automatic_header_script(converter):
+    """Verify that the template script derives the print header from document metadata."""
+    md_text = "---\ntitle: My Document\nauthor: Jane Doe\npublished: 2026\n---\nBody"
+    output = converter.convert(md_text)
+    assert 'meta[name="author"]' in output
+    assert 'meta[name="published"], meta[name="date"]' in output
+    assert "--print-header" in output
+    assert "const safeText = headerText.replace" in output
 
 
 def test_escape_characters(converter):
     """Verify that standard backslash escape characters resolve into simple literal typography outputs."""
-    assert converter.convert("\\*\\*text\\*\\*") == "<p>**text**</p>"
-    assert converter.convert("1\\/2") == "<p>1/2</p>"
-    assert converter.convert("\\{word|read\\}") == "<p>{word|read}</p>"
+    assert body(converter.convert("\\*\\*text\\*\\*")) == "<p>**text**</p>"
+    assert body(converter.convert("1\\/2")) == "<p>1/2</p>"
+    assert body(converter.convert("\\{word|read\\}")) == "<p>{word|read}</p>"
 
 
 def test_emoji_shortcodes(converter):
     """Verify that standard shortcodes are translated into their correct corresponding unicode emoji symbols."""
-    assert converter.convert(":joy: :heart:") == "<p>😂 ❤️</p>"
-    assert converter.convert(":star:") == "<p>⭐</p>"
-    assert converter.convert(":100: and :check_mark:") == "<p>💯 and ✔️</p>"
+    assert body(converter.convert(":joy: :heart:")) == "<p>😂 ❤️</p>"
+    assert body(converter.convert(":star:")) == "<p>⭐</p>"
+    assert body(converter.convert(":100: and :check_mark:")) == "<p>💯 and ✔️</p>"
 
 
 def test_fenced_code_blocks(converter):
     """Verify that fenced markdown code segments compile inside clean pre-formatted code block markup structures."""
     md_code = "```\n<html>\n  <body>\n```"
     expected = "<pre><code>&lt;html&gt;\n  &lt;body&gt;</code></pre>"
-    assert converter.convert(md_code) == expected
+    assert body(converter.convert(md_code)) == expected
 
 
 def test_fenced_code_block_with_language(converter):
     """Verify that explicit language designations generate an appropriately labeled structural div container block."""
     md_code = '```python\nprint("Hello, World!")\n```'
     expected = (
-        '<div class="code-lang">&sol;python&sol;</div>'
+        '<div class="code-lang">python</div>'
         '<pre><code>print("Hello, World!")</code></pre>'
     )
-    assert converter.convert(md_code) == expected
+    assert body(converter.convert(md_code)) == expected
 
 
 def test_paragraph_before_fenced_code_not_duplicated(converter):
     """Verify that normal paragraphs preceding a code container do not leave duplicate residual lines behind."""
-    assert converter.convert("Line\n```\ncode\n```") == (
+    assert body(converter.convert("Line\n```\ncode\n```")) == (
         "<p>Line</p>\n<pre><code>code</code></pre>"
     )
 
@@ -547,7 +625,7 @@ def test_tables(converter):
         '      <td style="text-align:right;">B</td>\n'
         "    </tr>\n  </tbody>\n</table>"
     )
-    assert converter.convert(md_table) == expected
+    assert body(converter.convert(md_table)) == expected
 
 
 def test_tables_with_footer(converter):
@@ -561,29 +639,33 @@ def test_tables_with_footer(converter):
         '  <tfoot>\n    <tr>\n      <td style="text-align:left;">Total</td>\n'
         '      <td style="text-align:right;">$3.00</td>\n    </tr>\n  </tfoot>\n</table>'
     )
-    assert converter.convert(md_table) == expected
+    assert body(converter.convert(md_table)) == expected
 
 
 def test_block_language_markers(converter):
     """Verify that custom block prefix flags assign specific semantic language parameters onto root HTML components."""
-    assert converter.convert("{:de} # Heading 1") == '<h1 lang="de">Heading 1</h1>'
     assert (
-        converter.convert("{:fr} Text français.") == '<p lang="fr">Text français.</p>'
+        body(converter.convert("{:de} # Heading 1"))
+        == '<h1 id="heading-1" lang="de">Heading 1</h1>'
     )
     assert (
-        converter.convert("{:de} - Item eins")
+        body(converter.convert("{:fr} Text français."))
+        == '<p lang="fr">Text français.</p>'
+    )
+    assert (
+        body(converter.convert("{:de} - Item eins"))
         == '<ul lang="de">\n  <li>Item eins</li>\n</ul>'
     )
     assert (
-        converter.convert("{:de} 1. Erstens")
+        body(converter.convert("{:de} 1. Erstens"))
         == '<ol lang="de">\n  <li>Erstens</li>\n</ol>'
     )
     assert (
-        converter.convert("{:de} > Zitat text")
+        body(converter.convert("{:de} > Zitat text"))
         == '<blockquote lang="de">\n  <p>Zitat text</p>\n</blockquote>'
     )
     assert (
-        converter.convert("{:de} Begriff\n: Erklärung")
+        body(converter.convert("{:de} Begriff\n: Erklärung"))
         == '<dl lang="de">\n  <dt>Begriff</dt>\n  <dd>Erklärung</dd>\n</dl>'
     )
 
@@ -596,20 +678,52 @@ def test_block_language_marker_table(converter):
         "      <th>Kopf</th>\n    </tr>\n  </thead>\n  <tbody>\n    <tr>\n"
         "      <td>Zelle</td>\n      <td>Zelle</td>\n    </tr>\n  </tbody>\n</table>"
     )
-    assert converter.convert(md_table) == expected
+    assert body(converter.convert(md_table)) == expected
 
 
 def test_inline_language_spans(converter):
     """Verify that embedded inline string layout configurations construct distinct span nodes with specific language properties."""
-    assert converter.convert("Text {:fr}\"L'État c'est moi\"{:} hier.") == (
+    assert body(converter.convert("Text {:fr}\"L'État c'est moi\"{:} hier.")) == (
         '<p>Text <span lang="fr">&ldquo;L&lsquo;État c&rsquo;est moi&rdquo;</span> hier.</p>'
     )
-    assert converter.convert("{:ru} Привет {:en}world{:}!") == (
+    assert body(converter.convert("{:ru} Привет {:en}world{:}!")) == (
         '<p lang="ru">Привет <span lang="en">world</span>!</p>'
     )
-    assert converter.convert("{:de} # Titel {:en}sub{:}") == (
-        '<h1 lang="de">Titel <span lang="en">sub</span></h1>'
+    assert body(converter.convert("{:de} # Titel {:en}sub{:}")) == (
+        '<h1 id="titel-sub" lang="de">Titel <span lang="en">sub</span></h1>'
     )
-    assert converter.convert("{:ja}{私|わたし}は{:}です。") == (
+    assert body(converter.convert("{:ja}{私|わたし}は{:}です。")) == (
         '<p><span lang="ja"><ruby>私<rp>(</rp><rt>わたし</rt><rp>)</rp></ruby>は</span>です。</p>'
     )
+
+
+def test_cli_page_orientation():
+    """Verify that --page portrait/landscape selects the matching print CSS."""
+    for layout, marker in (
+        ("portrait", "/* Portrait PDF/Print */"),
+        ("landscape", "/* Landscape PDF/Print */"),
+    ):
+        result = subprocess.run(
+            [sys.executable, "-m", "markdown2html5_base.cli", "--page", layout],
+            input="# Hi\n",
+            text=True,
+            capture_output=True,
+            check=True,
+        )
+        assert marker in result.stdout
+
+
+def test_toc_links_resolve_to_heading_ids(converter):
+    """Verify that fragment links in a TOC point to generated heading anchors."""
+    md = (
+        "## Table of Contents\n\n"
+        "* [Intro](#intro)\n"
+        "* [1. Headings (H1-H6)](#1-headings-h1-h6)\n\n"
+        "## Intro\n\n"
+        "## 1. Headings (H1-H6)\n"
+    )
+    output = converter.convert(md)
+    assert '<a href="#intro">Intro</a>' in output
+    assert '<a href="#1-headings-h1-h6">1. Headings (H1-H6)</a>' in output
+    assert '<h2 id="intro">Intro</h2>' in output
+    assert '<h2 id="1-headings-h1-h6">1. Headings (H1-H6)</h2>' in output

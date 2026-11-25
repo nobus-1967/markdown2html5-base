@@ -1,16 +1,20 @@
-"""Command-line interface converting a Markdown file into an HTML5 document."""
+"""Command-line interface converting a Markdown file into a styled HTML5 document."""
 
 import argparse
 import sys
 
 from markdown2html5_base import __version__
-from markdown2html5_base.converter import MarkdownToHTML
+from markdown2html5_base.converter import (
+    DEFAULT_PAGE_LAYOUT,
+    PAGE_LAYOUTS,
+    MarkdownToHTML,
+)
 
 
 def main() -> None:
-    """Convert a Markdown file from the command line, optionally embedding CSS."""
+    """Convert a Markdown file from the command line with print-ready CSS."""
     parser = argparse.ArgumentParser(
-        description="Convert Markdown (basic and extended syntax) into valid HTML5."
+        description="Convert Markdown (basic and extended syntax) into styled HTML5."
     )
     parser.add_argument(
         "-v",
@@ -34,15 +38,26 @@ def main() -> None:
         help="Output HTML5 file (defaults to stdout if not specified)",
     )
     parser.add_argument(
-        "--css",
-        action="store_true",
-        help="Embed the default viewing-friendly <style> block in <head>",
+        "--page",
+        dest="page",
+        metavar="LAYOUT",
+        choices=PAGE_LAYOUTS,
+        default=DEFAULT_PAGE_LAYOUT,
+        help=f"Page orientation: portrait or landscape (default: {DEFAULT_PAGE_LAYOUT})",
+    )
+    parser.add_argument(
+        "--orientation",
+        dest="page",
+        metavar="LAYOUT",
+        choices=PAGE_LAYOUTS,
+        default=argparse.SUPPRESS,
+        help=argparse.SUPPRESS,
     )
 
     args = parser.parse_args()
 
     try:
-        html_output = MarkdownToHTML().convert(args.input.read(), include_css=args.css)
+        html_output = MarkdownToHTML().convert(args.input.read(), orientation=args.page)
         args.output.write(html_output)
         if html_output and not html_output.endswith("\n"):
             args.output.write("\n")

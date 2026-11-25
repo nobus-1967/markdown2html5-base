@@ -1,0 +1,1373 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <style>
+/* Base Rules */
+:root {
+  --bg-page: #ffffff;
+  --bg-subtle: #f5f5f5;
+  --bg-row-even: #fafafa;
+  --text-main: #000000;
+  --text-muted: #525252;
+  --border-color: #000000;
+  --border-subtle: #e0e0e0;
+  --accent-mark: #ffff00;
+  --font-serif: "Noto Serif", "Liberation Serif", "Times New Roman", serif;
+  --font-sans: "Noto Sans", "Liberation Sans", Arial, sans-serif;
+  --font-mono: "Noto Sans Mono", "Liberation Mono", monospace;
+  --radius-sm: 4px;
+  --space-base: 24px;
+  --code-padding-x: 16px;
+  --print-header: none;
+}
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  padding: var(--space-base) var(--space-base) var(--space-base) calc(var(--space-base) * 2);
+  font-family: var(--font-serif);
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--text-main);
+  background-color: var(--bg-page);
+}
+h1, h2, h3, h4, h5, h6 {
+  margin: 1.3em 0 0.5em;
+  font-family: var(--font-sans);
+  font-weight: bold;
+  line-height: 1.25;
+  overflow-wrap: break-word;
+}
+h1 { font-size: 28px; margin-top: 0; }
+h2 { font-size: 24px; }
+h2#toc { font-style: italic; }
+h3 { font-size: 20px; }
+h4 { font-size: 18px; }
+h5 { font-size: 16px; }
+h6 { font-size: 16px; font-style: italic; }
+p {
+  margin: 0.9em 0;
+  overflow-wrap: break-word;
+}
+hr {
+  height: 2px;
+  margin: 24px 0;
+  border: none;
+  background-color: var(--border-color);
+}
+blockquote {
+  margin: 1.2em 0;
+  padding: 12px 20px;
+  border-left: 4px solid var(--border-color);
+  background-color: var(--bg-subtle);
+  font-style: italic;
+  overflow-wrap: break-word;
+}
+blockquote > :first-child { margin-top: 0; }
+blockquote > :last-child { margin-bottom: 0; }
+mark {
+  padding: 2px 5px;
+  border-radius: var(--radius-sm);
+  background-color: var(--accent-mark);
+  color: var(--text-main);
+}
+a:link { color: #0000cd; text-underline-offset: 2px; }
+a:visited { color: #9400d3; }
+a:hover, a:focus { outline: none; color: #000080; }
+a:active { color: #dc143c; }
+ol, ul {
+  margin: 1em 0;
+  padding-left: 0;
+  list-style: none;
+  overflow-wrap: break-word;
+}
+li > ol, li > ul {
+  margin: 0.4em 0 0.5em;
+  padding-left: 22px;
+}
+li > ol:last-child, li > ul:last-child {
+  margin-bottom: 0;
+}
+ol {
+  counter-reset: custom-counter;
+}
+li {
+  position: relative;
+  padding-left: 26px;
+  margin-bottom: 0.4em;
+  overflow-wrap: break-word;
+}
+li:last-child {
+  margin-bottom: 0;
+}
+ul > li::before {
+  content: "•";
+  position: absolute;
+  left: 8px;
+  top: 0;
+}
+ul ul > li::before { content: "◦"; }
+ul ul ul > li::before { content: "▪"; }
+ul.task-list > li,
+ul > li:has(input[type="checkbox"]) {
+  padding-left: 4px;
+}
+ul.task-list > li::before,
+ul > li:has(input[type="checkbox"])::before {
+  display: none;
+}
+ol > li {
+  counter-increment: custom-counter;
+}
+ol > li::before {
+  content: counter(custom-counter) ".";
+  position: absolute;
+  left: 0;
+  top: 0;
+  font-variant-numeric: tabular-nums;
+}
+ol ol > li::before { content: counter(custom-counter, lower-alpha) "."; }
+ol ol ol > li::before { content: counter(custom-counter, lower-roman) "."; }
+ol li input[type="checkbox"],
+ul li input[type="checkbox"] {
+  position: static;
+  display: inline-block;
+  width: 15px;
+  height: 15px;
+  margin: 0 8px 0 0;
+  vertical-align: -2px;
+  accent-color: var(--text-main);
+}
+dl { margin: 1.2em 0; }
+dt {
+  margin-top: 0.9em;
+  font-weight: bold;
+  overflow-wrap: anywhere;
+}
+dd {
+  margin: 0.25em 0 0;
+  padding-left: 14px;
+  border-left: 2px solid var(--border-subtle);
+  font-style: italic;
+  overflow-wrap: break-word;
+}
+code {
+  padding: 2px 5px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background-color: var(--bg-subtle);
+  font-family: var(--font-mono);
+  font-size: 0.88em;
+  line-height: 1;
+  overflow-wrap: anywhere;
+}
+div.code-lang {
+  display: block;
+  width: fit-content;
+  position: relative;
+  z-index: 2;
+  margin: 1.2em calc(var(--code-padding-x) + 1px) -10px auto;
+  padding: 3px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: 0.8em;
+  font-weight: bold;
+  line-height: 1;
+  background-color: var(--text-main);
+  color: var(--bg-page);
+}
+pre {
+  position: relative;
+  z-index: 1;
+  max-width: 100%;
+  margin: 1.2em 0;
+  padding: 16px var(--code-padding-x);
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-subtle);
+  overflow-x: auto;
+}
+div.code-lang + pre {
+  margin-top: 0;
+  padding-top: 22px;
+}
+pre > code {
+  display: block;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  line-height: 1.45;
+  background-color: transparent;
+  white-space: pre;
+  overflow-wrap: normal;
+}
+table {
+  width: 100%;
+  margin: 1.5em 0;
+  border-collapse: collapse;
+  border: 1px solid var(--border-color);
+}
+th, td {
+  padding: 10px 14px;
+  text-align: left;
+  border: 1px solid var(--border-color);
+  overflow-wrap: anywhere;
+}
+thead tr {
+  background-color: var(--text-main);
+  color: var(--bg-page);
+}
+thead th {
+  font-family: var(--font-sans);
+  font-weight: bold;
+}
+
+tbody tr:nth-child(even) {
+  background-color: var(--bg-row-even);
+}
+tfoot tr {
+  background-color: var(--bg-subtle);
+  font-style: italic;
+}
+figure {
+  display: block;
+  margin: 1.2em 0;
+}
+figure img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+figcaption {
+  margin-top: 6px;
+  font-size: 0.9em;
+  font-style: italic;
+  color: var(--text-muted);
+  overflow-wrap: break-word;
+}
+ruby { ruby-position: over; ruby-align: space-around; }
+rt { letter-spacing: 0.05em; font-size: 0.55em; white-space: nowrap; }
+rp { display: none; }
+span[lang="ja"] { font-family: "Noto Serif CJK JP", "Source Han Serif JP", serif; }
+span[lang="zh-CN"], span[lang="zh-Hans"] { font-family: "Noto Serif CJK SC", "Source Han Serif SC", serif; }
+span[lang="zh-TW"], span[lang="zh-Hant"] { font-family: "Noto Serif CJK TC", "Source Han Serif TC", serif; }
+span[lang="zh-HK"] { font-family: "Noto Serif CJK HK", "Source Han Serif HK", serif; }
+span[lang="ko"] { font-family: "Noto Serif CJK KR", "Source Han Serif KR", serif; }
+
+/* Portrait PDF/Print */
+@page {
+  size: A4 portrait;
+  margin: 22mm 15mm 20mm 25mm;
+  @top-center {
+    content: var(--print-header);
+    font-family: var(--font-sans);
+    font-size: 8.5pt;
+    color: var(--text-muted);
+    vertical-align: bottom;
+    padding-bottom: 6pt;
+    border-bottom: 0.5pt solid var(--border-subtle);
+  }
+  @bottom-center {
+    content: counter(page);
+    font-family: var(--font-sans);
+    font-size: 8.5pt;
+    color: var(--text-muted);
+    vertical-align: top;
+    padding-top: 6pt;
+  }
+}
+@media print {
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  body {
+    padding: 0;
+    font-size: 11pt;
+    line-height: 1.45;
+    color: #000000;
+    background-color: #ffffff;
+  }
+  h1 { font-size: 20pt; }
+  h2 { font-size: 17pt; }
+  h3 { font-size: 14.5pt; }
+  h4 { font-size: 12.5pt; }
+  h5, h6 { font-size: 11pt; }
+  h1, h2, h3, h4, h5, h6, dt, div.code-lang {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+  blockquote, figure, pre, tr {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  p, li {
+    orphans: 3;
+    widows: 3;
+  }
+  pre {
+    overflow: visible;
+  }
+  pre > code {
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
+  }
+  thead {
+    display: table-header-group;
+  }
+  tfoot {
+    display: table-footer-group;
+  }
+  a:link, a:visited {
+    color: #000000;
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+  }
+  a[href^="http"]::after {
+    content: " (" attr(href) ")";
+    font-family: var(--font-mono);
+    font-size: 0.85em;
+    color: var(--text-muted);
+    word-break: break-all;
+  }
+}
+    </style>
+  </head>
+  <body>
+<h1 id="markdown2html5-base"><code>markdown2html5-base</code></h1>
+<h1 id="full-markdown-functionality-reference">Full Markdown Functionality Reference</h1>
+<p>This reference covers all <code>markdown2html5-base</code> features.</p>
+<h2 id="table-of-contents">Table of Contents</h2>
+<ul>
+  <li><a href="#programmatic-usage">Programmatic Usage</a></li>
+  <li><a href="#1-headings-h1-h6">1. Headings (H1-H6)</a></li>
+  <li><a href="#2-inline-text-styling">2. Inline Text Styling</a></li>
+  <li><a href="#3-links-and-images">3. Links and Images</a></li>
+  <li><a href="#4-fenced-code-blocks">4. Fenced Code Blocks</a></li>
+  <li><a href="#5-horizontal-rules">5. Horizontal Rules</a></li>
+  <li><a href="#6-lists">6. Lists</a></li>
+  <li><a href="#7-toc-table-of-contents">7. TOC (Table of Contents)</a></li>
+  <li><a href="#8-blockquotes">8. Blockquotes</a></li>
+  <li><a href="#9-tables">9. Tables</a></li>
+  <li><a href="#10-definition-lists">10. Definition Lists</a></li>
+  <li><a href="#11-footnotes">11. Footnotes</a></li>
+  <li><a href="#12-language-markers">12. Language Markers</a></li>
+  <li><a href="#13-ruby-annotations">13. Ruby Annotations</a></li>
+  <li><a href="#14-emoji-shortcodes">14. Emoji Shortcodes</a></li>
+  <li><a href="#15-typography-and-legal-marks">15. Typography and Legal Marks</a></li>
+  <li><a href="#16-hard-line-breaks">16. Hard Line Breaks</a></li>
+  <li><a href="#17-html-comments">17. HTML Comments</a></li>
+  <li><a href="#18-yaml-front-matter">18. YAML Front Matter</a></li>
+  <li><a href="#19-backslash-escaping">19. Backslash Escaping</a></li>
+  <li><a href="#20-paragraphs">20. Paragraphs</a></li>
+  <li><a href="#21-css-styles-and-print-orientation">21. CSS Styles and Print Orientation</a></li>
+  <li><a href="#22-automatic-pdf-header">22. Automatic PDF Header</a></li>
+</ul>
+<!-- -->
+<h2 id="programmatic-usage">Programmatic Usage</h2>
+<div class="code-lang">python</div><pre><code>from markdown2html5_base import MarkdownToHTML
+converter = MarkdownToHTML()
+html = converter.convert("# Hello")  # portrait by default
+landscape_html = converter.convert("# Hello", orientation="landscape")
+print(html)</code></pre>
+<h2 id="1-headings-h1-h6">1. Headings (H1-H6)</h2>
+<table>
+  <thead>
+    <tr>
+      <th>Markdown</th>
+      <th>Output HTML</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code># Heading 1</code></td>
+      <td><code>&lt;h1 id="heading-1"&gt;Heading 1&lt;/h1&gt;</code></td>
+    </tr>
+    <tr>
+      <td><code>## Heading 2</code></td>
+      <td><code>&lt;h2 id="heading-2"&gt;Heading 2&lt;/h2&gt;</code></td>
+    </tr>
+    <tr>
+      <td><code>### Heading 3</code></td>
+      <td><code>&lt;h3 id="heading-3"&gt;Heading 3&lt;/h3&gt;</code></td>
+    </tr>
+    <tr>
+      <td><code>#### Heading 4</code></td>
+      <td><code>&lt;h4 id="heading-4"&gt;Heading 4&lt;/h4&gt;</code></td>
+    </tr>
+    <tr>
+      <td><code>##### Heading 5</code></td>
+      <td><code>&lt;h5 id="heading-5"&gt;Heading 5&lt;/h5&gt;</code></td>
+    </tr>
+    <tr>
+      <td><code>###### Heading 6</code></td>
+      <td><code>&lt;h6 id="heading-6"&gt;Heading 6&lt;/h6&gt;</code></td>
+    </tr>
+  </tbody>
+</table>
+<p>Every heading receives an automatic lowercase slug ID, so fragment links such as <code>[Heading 1](#heading-1)</code> work in a TOC. Punctuation is dropped, spaces become hyphens, and duplicate slugs get <code>-1</code>, <code>-2</code>, &hellip; suffixes.</p>
+<p>Custom ID: <code>## Section {#sec1}</code> &rArr; <code>&lt;h2 id="sec1"&gt;Section&lt;/h2&gt;</code> (the explicit ID replaces the generated one).</p>
+<h2 id="2-inline-text-styling">2. Inline Text Styling</h2>
+<table>
+  <thead>
+    <tr>
+      <th>Markdown</th>
+      <th>Output HTML</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>***bold italic***</code></td>
+      <td><code>&lt;strong&gt;&lt;em&gt;bold italic&lt;/em&gt;&lt;/strong&gt;</code></td>
+    </tr>
+    <tr>
+      <td><code>___bold italic___</code></td>
+      <td><code>&lt;strong&gt;&lt;em&gt;bold italic&lt;/em&gt;&lt;/strong&gt;</code></td>
+    </tr>
+    <tr>
+      <td><code>**bold**</code></td>
+      <td><code>&lt;strong&gt;bold&lt;/strong&gt;</code></td>
+    </tr>
+    <tr>
+      <td><code>__bold__</code></td>
+      <td><code>&lt;strong&gt;bold&lt;/strong&gt;</code></td>
+    </tr>
+    <tr>
+      <td><code>*italic*</code></td>
+      <td><code>&lt;em&gt;italic&lt;/em&gt;</code></td>
+    </tr>
+    <tr>
+      <td><code>_italic_</code></td>
+      <td><code>&lt;em&gt;italic&lt;/em&gt;</code></td>
+    </tr>
+    <tr>
+      <td><code>~~strikethrough~~</code></td>
+      <td><code>&lt;s&gt;strikethrough&lt;/s&gt;</code></td>
+    </tr>
+    <tr>
+      <td><code>==highlight==</code></td>
+      <td><code>&lt;mark&gt;highlight&lt;/mark&gt;</code></td>
+    </tr>
+    <tr>
+      <td><code>~subscript~</code></td>
+      <td><code>&lt;sub&gt;subscript&lt;/sub&gt;</code></td>
+    </tr>
+    <tr>
+      <td><code>^^underline^^</code></td>
+      <td><code>&lt;u&gt;underline&lt;/u&gt;</code></td>
+    </tr>
+    <tr>
+      <td><code>^superscript^</code></td>
+      <td><code>&lt;sup&gt;superscript&lt;/sup&gt;</code></td>
+    </tr>
+    <tr>
+      <td>`<code> </code>code<code> </code>`</td>
+      <td><code>&lt;code&gt;code&lt;/code&gt;</code></td>
+    </tr>
+  </tbody>
+</table>
+<p>As in CommonMark, an underscore does not open or close emphasis inside a word, so identifiers keep their underscores: <code>snake_case_name</code> → <code>snake_case_name</code>, not <code>snake&lt;em&gt;case&lt;/em&gt;name</code>. Use <code>*</code> for emphasis, or escape the underscores (<code>snake_case_name</code>), when the underscores must remain visible.</p>
+<h2 id="3-links-and-images">3. Links and Images</h2>
+<table>
+  <thead>
+    <tr>
+      <th>Markdown</th>
+      <th>Output HTML</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>[text](url)</code></td>
+      <td><code>&lt;a href="url"&gt;text&lt;/a&gt;</code></td>
+    </tr>
+    <tr>
+      <td><code>[text](url "Title")</code></td>
+      <td><code>&lt;a href="url" title="Title"&gt;text&lt;/a&gt;</code></td>
+    </tr>
+    <tr>
+      <td><code>![alt](src)</code></td>
+      <td><code>&lt;figure&gt;&lt;img src="src" alt="alt"&gt;&lt;/figure&gt;</code></td>
+    </tr>
+    <tr>
+      <td><code>![alt](src "Title")</code></td>
+      <td><code>&lt;figure&gt;&lt;img src="src" alt="alt" title="Title"&gt;&lt;figcaption&gt;Title&lt;/figcaption&gt;&lt;/figure&gt;</code></td>
+    </tr>
+  </tbody>
+</table>
+<p>A link destination is taken verbatim and is never processed for emphasis or typography, so <code>[link_text](target_x)</code> renders as <code>&lt;a href="target_x"&gt;link_text&lt;/a&gt;</code>. Balanced parentheses are kept (<code>[text](http://e.com/a_(b))</code>), and a destination containing spaces can be wrapped in angle brackets (<code>[text](&lt;http://e.com/a b&gt;)</code>).</p>
+<h2 id="4-fenced-code-blocks">4. Fenced Code Blocks</h2>
+<p>A language tag after the opening fence (three backticks before and after the code) is rendered as a <code>&lt;div class="code-lang"&gt;python&lt;/div&gt;</code> label above the <code>&lt;code&gt;</code> element:</p>
+<div class="code-lang">html</div><pre><code>&lt;div class="code-lang"&gt;python&lt;/div&gt;&lt;pre&gt;&lt;code&gt;def hello():
+    print("Hi")&lt;/code&gt;&lt;/pre&gt;</code></pre>
+<p>Without a language tag, the code renders plainly as <code>&lt;pre&gt;&lt;code&gt;</code>.</p>
+<h2 id="5-horizontal-rules">5. Horizontal Rules</h2>
+<p><code>---</code> / <code>***</code> / <code>___</code> (3+ chars) &rArr; <code>&lt;hr&gt;</code></p>
+<h2 id="6-lists">6. Lists</h2>
+<ol>
+  <li><strong>Unordered:</strong> <code>* Item</code> or <code>- Item</code> &rArr; <code>&lt;ul&gt;&lt;li&gt;Item&lt;/li&gt;&lt;/ul&gt;</code></li>
+  <li><strong>Ordered:</strong> <code>1. Item</code> &rArr; <code>&lt;ol&gt;&lt;li&gt;Item&lt;/li&gt;&lt;/ol&gt;</code></li>
+  <li><strong>Task:</strong><br /></li>
+</ol>
+<p><code>- [ ] todo</code> &rArr; <code>&lt;ul&gt;&lt;li&gt;&lt;input type="checkbox" disabled&gt; todo&lt;/li&gt;&lt;/ul&gt;</code><br />
+<code>1. [x] done</code> &rArr; <code>&lt;ol&gt;&lt;li&gt;&lt;input type="checkbox" checked disabled&gt; done&lt;/li&gt;&lt;/ol&gt;</code></p>
+<ol>
+  <li><strong>Nested:</strong> indent an item with 2 (or 4) spaces or a tab to nest a list one level deeper. Nesting works to any depth, and each level may switch freely between bullets and numbers:</li>
+</ol>
+<!-- -->
+<div class="code-lang">text</div><pre><code>- Parent
+  - Child
+    1. Grandchild</code></pre>
+<p>&rArr;</p>
+<div class="code-lang">html</div><pre><code>&lt;ul&gt;
+  &lt;li&gt;Parent
+    &lt;ul&gt;
+      &lt;li&gt;Child
+        &lt;ol&gt;
+          &lt;li&gt;Grandchild&lt;/li&gt;
+        &lt;/ol&gt;
+      &lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+&lt;/ul&gt;</code></pre>
+<h2 id="7-toc-table-of-contents">7. TOC (Table of Contents)</h2>
+<p>The Table of Contents (TOC) combines the styles of Heading 2, unordered lists, and links.</p>
+<div class="code-lang">text</div><pre><code>## Table of Contents {#toc}
+
+- [1. Headings (H1-H6)](#1-headings-h1-h6)
+- [2. Inline Text Styling](#2-inline-text-styling)
+- [3. Links and Images](#3-links-and-images)</code></pre>
+<p>&rArr;</p>
+<div class="code-lang">html</div><pre><code>&lt;h2 id="toc"&gt;Table of Contents&lt;/h2&gt;
+&lt;ul&gt;
+  &lt;li&gt;&lt;a href="#1-headings-h1-h6"&gt;1. Headings (H1-H6)&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href="#2-inline-text-styling"&gt;2. Inline Text Styling&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href="#3-links-and-images"&gt;3. Links and Images&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;</code></pre>
+<h2 id="8-blockquotes">8. Blockquotes</h2>
+<p><code>&gt; text</code> &rArr; <code>&lt;blockquote&gt;&lt;p&gt;text&lt;/p&gt;&lt;/blockquote&gt;</code>: blank lines within a blockquote split into separate <code>&lt;p&gt;</code> tags.</p>
+<h2 id="9-tables">9. Tables</h2>
+<p>Supports <code>&lt;thead&gt;</code>, <code>&lt;tbody&gt;</code>, <code>&lt;tfoot&gt;</code>, and alignment:</p>
+<table>
+  <thead>
+    <tr>
+      <th>Separator</th>
+      <th>Alignment</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>:---</code></td>
+      <td>left</td>
+    </tr>
+    <tr>
+      <td><code>:---:</code></td>
+      <td>center</td>
+    </tr>
+    <tr>
+      <td><code>---:</code></td>
+      <td>right</td>
+    </tr>
+  </tbody>
+</table>
+<p>Footer: a row of <code>=</code> signs below the separator columns, after the body rows, renders a <code>&lt;tfoot&gt;</code>.</p>
+<div class="code-lang">markdown</div><pre><code>| Product  | Qty | Price |
+| :------- | :-: | ----: |
+| Apples   | 2   | $3.00 |
+| Bananas  | 3   | $1.50 |
+| Cherries | 1   | $4.00 |
+|==========|=====|=======|
+| Total    | 6   | $8.50 |</code></pre>
+<p>&rArr;</p>
+<div class="code-lang">html</div><pre><code>&lt;table&gt;
+  &lt;thead&gt;
+    &lt;tr&gt;
+      &lt;th style="text-align:left;"&gt;Product&lt;/th&gt;
+      &lt;th style="text-align:center;"&gt;Qty&lt;/th&gt;
+      &lt;th style="text-align:right;"&gt;Price&lt;/th&gt;
+    &lt;/tr&gt;
+  &lt;/thead&gt;
+  &lt;tbody&gt;
+    &lt;tr&gt;
+      &lt;td style="text-align:left;"&gt;Apples&lt;/td&gt;
+      &lt;td style="text-align:center;"&gt;2&lt;/td&gt;
+      &lt;td style="text-align:right;"&gt;$3.00&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td style="text-align:left;"&gt;Bananas&lt;/td&gt;
+      &lt;td style="text-align:center;"&gt;3&lt;/td&gt;
+      &lt;td style="text-align:right;"&gt;$1.50&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td style="text-align:left;"&gt;Cherries&lt;/td&gt;
+      &lt;td style="text-align:center;"&gt;1&lt;/td&gt;
+      &lt;td style="text-align:right;"&gt;$4.00&lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/tbody&gt;
+  &lt;tfoot&gt;
+    &lt;tr&gt;
+      &lt;td style="text-align:left;"&gt;Total&lt;/td&gt;
+      &lt;td style="text-align:center;"&gt;6&lt;/td&gt;
+      &lt;td style="text-align:right;"&gt;$8.50&lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/tfoot&gt;
+&lt;/table&gt;</code></pre>
+<h2 id="10-definition-lists">10. Definition Lists</h2>
+<div class="code-lang">markdown</div><pre><code>Term
+: Definition 1
+: Definition 2</code></pre>
+<p>&rArr;</p>
+<div class="code-lang">html</div><pre><code>&lt;dl&gt;
+  &lt;dt&gt;Term&lt;/dt&gt;
+  &lt;dd&gt;Definition 1&lt;/dd&gt;
+  &lt;dd&gt;Definition 2&lt;/dd&gt;
+&lt;/dl&gt;</code></pre>
+<h2 id="11-footnotes">11. Footnotes</h2>
+<p>Reference: <code>[^1]</code> &rArr; <code>&lt;sup id="fnref:1"&gt;&lt;a href="#fn:1" class="footnote-ref"&gt;1&lt;/a&gt;&lt;/sup&gt;</code></p>
+<p>Definition: <code>[^1]: Text</code> at bottom &rArr; rendered in <code>&lt;div class="footnotes"&gt;&lt;ol&gt;...&lt;/ol&gt;&lt;/div&gt;</code></p>
+<p>Identifiers may contain letters, digits, underscores and dashes, e.g. <code>[^see_note_1]</code>.</p>
+<h2 id="12-language-markers">12. Language Markers</h2>
+<p>Annotate blocks or inline text with a language using a valid BCP 47 tag (e.g. <code>de</code>, <code>fr</code>, <code>zh-Hans</code>).</p>
+<ul>
+  <li><strong>Block level:</strong> Place <code>{:lang} </code> (with a space after it) at the very start of a line, before the Markdown tag. It renders as the global <code>lang</code> attribute on the resulting element and needs no closing marker:</li>
+</ul>
+<!-- -->
+<div class="code-lang">text</div><pre><code>  {:de} # Überschrift
+  {:fr} Un paragraphe français.
+  {:ru} - Пункт списка
+  {:de} &gt; Ein Zitat
+  {:de} | Kopf  | Kopf  |
+        | ----- | ----- |
+        | Zelle | Zelle |</code></pre>
+<p>&rArr;</p>
+<div class="code-lang">html</div><pre><code>  &lt;h1 lang="de"&gt;Überschrift&lt;/h1&gt;
+  &lt;p lang="fr"&gt;Un paragraphe français.&lt;/p&gt;
+  &lt;ul lang="ru"&gt;
+    &lt;li&gt;Пункт списка&lt;/li&gt;
+  &lt;/ul&gt;
+  &lt;blockquote lang="de"&gt;...&lt;/blockquote&gt;
+  &lt;table lang="de"&gt;...&lt;/table&gt;</code></pre>
+<ul>
+  <li><strong>Inline level:</strong> Wrap text with <code>{:lang}...{:}</code> to render a <code>&lt;span lang="..."&gt;</code>:</li>
+</ul>
+<!-- -->
+<div class="code-lang">text</div><pre><code>A French phrase {:fr}"L'État c'est moi"{:} is traditionally attributed to King Louis XIV of France.</code></pre>
+<p>&rArr;</p>
+<div class="code-lang">html</div><pre><code>&lt;p&gt;A French phrase &lt;span lang="fr"&gt;“L‘État c’est moi”&lt;/span&gt; is traditionally attributed to King Louis XIV of France&lt;/p&gt;</code></pre>
+<h2 id="13-ruby-annotations">13. Ruby Annotations</h2>
+<p><code>{日本語|にほんご}</code> &rArr; <code>&lt;ruby&gt;日本語&lt;rp&gt;(&lt;/rp&gt;&lt;rt&gt;にほんご&lt;/rt&gt;&lt;rp&gt;)&lt;/rp&gt;&lt;/ruby&gt;</code></p>
+<h2 id="14-emoji-shortcodes">14. Emoji Shortcodes</h2>
+<ul>
+  <li><code>:joy:</code> 😂</li>
+  <li><code>:smile:</code> 😄</li>
+  <li><code>:heart:</code> ❤️</li>
+  <li><code>:thumbsup:</code> 👍</li>
+  <li><code>:thumbsdown:</code> 👎</li>
+  <li><code>:wink:</code> 😉</li>
+  <li><code>:tada:</code> 🎉</li>
+  <li><code>:rocket:</code> 🚀</li>
+  <li><code>:fire:</code> 🔥</li>
+  <li><code>:star:</code> ⭐</li>
+  <li><code>:cry:</code> 😢</li>
+  <li><code>:thinking:</code> 🤔</li>
+  <li><code>:100:</code> 💯</li>
+  <li><code>:sparkles:</code> ✨</li>
+  <li><code>:eyes:</code> 👀</li>
+  <li><code>:bulb:</code> 💡</li>
+  <li><code>:warning:</code> ⚠️</li>
+  <li><code>:ok:</code> 👌</li>
+  <li><code>:check_mark:</code> ✔️</li>
+</ul>
+<!-- -->
+<h2 id="15-typography-and-legal-marks">15. Typography and Legal Marks</h2>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Input</th>
+      <th>HTML Output</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Copyright</td>
+      <td><code>(c)</code></td>
+      <td><code>&amp;copy;</code></td>
+    </tr>
+    <tr>
+      <td>Trademark</td>
+      <td><code>(tm)</code></td>
+      <td><code>&amp;trade;</code></td>
+    </tr>
+    <tr>
+      <td>Registered Trademark</td>
+      <td><code>(r)</code></td>
+      <td><code>&amp;reg;</code></td>
+    </tr>
+    <tr>
+      <td>Plus-Minus</td>
+      <td><code>+/-</code></td>
+      <td><code>&amp;plusmn;</code></td>
+    </tr>
+    <tr>
+      <td>Not Equal To</td>
+      <td><code>!=</code></td>
+      <td><code>&amp;ne;</code></td>
+    </tr>
+    <tr>
+      <td>Logical Equivalence</td>
+      <td><code>&lt;=&gt;</code></td>
+      <td><code>&amp;hArr;</code></td>
+    </tr>
+    <tr>
+      <td>Less-Than or Equal To</td>
+      <td><code>&lt;=</code></td>
+      <td><code>&amp;le;</code></td>
+    </tr>
+    <tr>
+      <td>Greater-Than or Equal To</td>
+      <td><code>&gt;=</code></td>
+      <td><code>&amp;ge;</code></td>
+    </tr>
+    <tr>
+      <td>Right Arrow</td>
+      <td><code>-&gt;</code></td>
+      <td><code>&amp;rarr;</code></td>
+    </tr>
+    <tr>
+      <td>Left Arrow</td>
+      <td><code>&lt;-</code></td>
+      <td><code>&amp;larr;</code></td>
+    </tr>
+    <tr>
+      <td>Up Arrow</td>
+      <td><code>&amp;uarr;</code></td>
+      <td><code>&amp;uarr;</code></td>
+    </tr>
+    <tr>
+      <td>Down Arrow</td>
+      <td><code>&amp;darr;</code></td>
+      <td><code>&amp;darr;</code></td>
+    </tr>
+    <tr>
+      <td>Logical Implication</td>
+      <td><code>=&gt;</code></td>
+      <td><code>&amp;rArr;</code></td>
+    </tr>
+    <tr>
+      <td>Solidus (Slash)</td>
+      <td><code>&amp;sol;</code></td>
+      <td><code>&amp;sol;</code></td>
+    </tr>
+    <tr>
+      <td>Reverse Solidus (Backslash)</td>
+      <td><code>&amp;bsol;</code></td>
+      <td><code>&amp;bsol;</code></td>
+    </tr>
+    <tr>
+      <td>One-Half</td>
+      <td><code>1/2</code></td>
+      <td><code>&amp;frac12;</code></td>
+    </tr>
+    <tr>
+      <td>One-Third</td>
+      <td><code>1/3</code></td>
+      <td><code>&amp;frac13;</code></td>
+    </tr>
+    <tr>
+      <td>Two-Thirds</td>
+      <td><code>2/3</code></td>
+      <td><code>&amp;frac23;</code></td>
+    </tr>
+    <tr>
+      <td>One-Quarter</td>
+      <td><code>1/4</code></td>
+      <td><code>&amp;frac14;</code></td>
+    </tr>
+    <tr>
+      <td>Three-Quarters</td>
+      <td><code>3/4</code></td>
+      <td><code>&amp;frac34;</code></td>
+    </tr>
+    <tr>
+      <td>Left Angle Quote</td>
+      <td><code>&lt;&lt;</code></td>
+      <td><code>&amp;laquo;</code></td>
+    </tr>
+    <tr>
+      <td>Right Angle Quote</td>
+      <td><code>&gt;&gt;</code></td>
+      <td><code>&amp;raquo;</code></td>
+    </tr>
+    <tr>
+      <td>Left Double Quote</td>
+      <td><code>&amp;ldquo;</code></td>
+      <td><code>&amp;ldquo;</code></td>
+    </tr>
+    <tr>
+      <td>Right Double Quote</td>
+      <td><code>&amp;rdquo;</code></td>
+      <td><code>&amp;rdquo;</code></td>
+    </tr>
+    <tr>
+      <td>Smart Double Quotes</td>
+      <td><code>"text"</code></td>
+      <td><code>&amp;ldquo;text&amp;rdquo;</code></td>
+    </tr>
+    <tr>
+      <td>Smart Single Quotes</td>
+      <td><code>'text'</code></td>
+      <td><code>&amp;lsquo;text&amp;rsquo;</code></td>
+    </tr>
+    <tr>
+      <td>Straight Apostrophe</td>
+      <td><code>'</code></td>
+      <td><code>&amp;apos;</code></td>
+    </tr>
+    <tr>
+      <td>Em Dash</td>
+      <td><code>---</code></td>
+      <td><code>&amp;mdash;</code></td>
+    </tr>
+    <tr>
+      <td>En Dash</td>
+      <td><code>--</code></td>
+      <td><code>&amp;ndash;</code></td>
+    </tr>
+    <tr>
+      <td>Ellipsis</td>
+      <td><code>...</code></td>
+      <td><code>&amp;hellip;</code></td>
+    </tr>
+    <tr>
+      <td>Non-Breaking Space</td>
+      <td><code>&amp;nbsp;</code></td>
+      <td><code>&amp;nbsp;</code></td>
+    </tr>
+  </tbody>
+</table>
+<h2 id="16-hard-line-breaks">16. Hard Line Breaks</h2>
+<p>End line with two spaces or backslash: <code>&lt;br /&gt;</code></p>
+<h2 id="17-html-comments">17. HTML Comments</h2>
+<p><code>[comment]: #</code> &rArr; <code>&lt;!--comment--&gt;</code></p>
+<h2 id="18-yaml-front-matter">18. YAML Front Matter</h2>
+<p>The converter always emits a complete HTML5 document with the body content between <code>&lt;body&gt;</code> tags. A YAML front matter block between <code>---</code> lines, when present, supplies the metadata in <code>&lt;head&gt;</code>. The CSS3 <code>&lt;style&gt;</code> block is embedded regardless of whether front matter is present.</p>
+<div class="code-lang">yaml</div><pre><code>---
+lang: en
+title: My Document
+author: Jane Doe
+description: A short description.
+keywords: python, markdown, html5
+published: 2026-08-09
+---</code></pre>
+<ul>
+  <li><code>lang</code> becomes the <code>&lt;html lang="..."&gt;</code> attribute (a valid BCP 47 tag).</li>
+  <li><code>title</code> becomes the <code>&lt;title&gt;</code> element.</li>
+  <li><code>author</code>, <code>description</code>, <code>keywords</code>, and <code>published</code> become <code>&lt;meta name="..." content="..." /&gt;</code> tags.</li>
+  <li>A CSS3 <code>&lt;style&gt;</code> block with viewing-friendly screen and print rules is embedded in <code>&lt;head&gt;</code>.</li>
+</ul>
+<!-- -->
+<div class="code-lang">html</div><pre><code>&lt;!doctype html&gt;
+&lt;html lang="en"&gt;
+  &lt;head&gt;
+    &lt;meta charset="utf-8" /&gt;
+    &lt;meta name="author" content="Jane Doe" /&gt;
+    &lt;meta name="description" content="A short description." /&gt;
+    &lt;meta name="keywords" content="python, markdown, html5" /&gt;
+    &lt;title&gt;My Document&lt;/title&gt;
+    &lt;meta name="published" content="2026-08-09" /&gt;
+    &lt;style&gt;
+      /* CSS3 base + portrait or landscape print rules */
+    &lt;/style&gt;
+  &lt;/head&gt;
+  &lt;body&gt;
+    ...
+  &lt;/body&gt;
+&lt;/html&gt;</code></pre>
+<p>Any other keys are ignored. Documents without front matter are still complete HTML5 documents with the default CSS and the automatic header script.</p>
+<h2 id="19-backslash-escaping">19. Backslash Escaping</h2>
+<p>Escape any special char: <code>*</code>, <code>#</code>, <code>[</code>, etc.</p>
+<p>Escapable: \ ` * _ { } [ ] ( ) # + - . ! | ~ ^ = : < ></p>
+<h2 id="20-paragraphs">20. Paragraphs</h2>
+<p>Consecutive text lines merge into <code>&lt;p&gt;</code>. Blank lines separate paragraphs.</p>
+<p>Empty line after list close &rArr; <code>&lt;!-- --&gt;</code> preserves whitespace.</p>
+<h2 id="21-css-styles-and-print-orientation">21. CSS Styles and Print Orientation</h2>
+<p>Every document produced by the converter contains a single <code>&lt;style&gt;</code> block; emitting an unstyled HTML fragment is no longer supported. The block is assembled from three parts available as class attributes on <code>MarkdownToHTML</code>:</p>
+<table>
+  <thead>
+    <tr>
+      <th>Attribute</th>
+      <th>Purpose</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>DOCUMENT_CSS</code></td>
+      <td>Starts with <code>/* Base Rules */</code>, then base CSS3 rules for screen/WebKitGTK: custom properties, typography, lists, code blocks, tables, figures, ruby and CJK font stacks.</td>
+    </tr>
+    <tr>
+      <td><code>PORTRAIT_CSS</code></td>
+      <td>Starts with <code>/* Portrait PDF/Print */</code>; A4 portrait <code>@page</code> margins and <code>@media print</code> rules.</td>
+    </tr>
+    <tr>
+      <td><code>LANDSCAPE_CSS</code></td>
+      <td>Starts with <code>/* Landscape PDF/Print */</code>; A4 landscape <code>@page</code> margins and <code>@media print</code> rules.</td>
+    </tr>
+  </tbody>
+</table>
+<p>The orientation name is stripped and lowercased, then validated against <code>("portrait", "landscape")</code>. An unknown value raises <code>ValueError</code>.</p>
+<p>Python API:</p>
+<div class="code-lang">python</div><pre><code>from markdown2html5_base import MarkdownToHTML
+
+html = MarkdownToHTML().convert(markdown_text)                    # portrait
+html = MarkdownToHTML().convert(markdown_text, "landscape")       # landscape
+html = MarkdownToHTML().convert(markdown_text, page_layout="landscape")  # alias</code></pre>
+<p>CLI:</p>
+<div class="code-lang">bash</div><pre><code>markdown2html5-base input.md --page portrait -o output.html
+markdown2html5-base input.md --page landscape -o output.html</code></pre>
+<h3 id="markdowntohtmldocumentcss"><code>MarkdownToHTML.DOCUMENT_CSS</code></h3>
+<div class="code-lang">css</div><pre><code>/* Base Rules */
+:root {
+  --bg-page: #ffffff;
+  --bg-subtle: #f5f5f5;
+  --bg-row-even: #fafafa;
+  --text-main: #000000;
+  --text-muted: #525252;
+  --border-color: #000000;
+  --border-subtle: #e0e0e0;
+  --accent-mark: #ffff00;
+  --font-serif: "Noto Serif", "Liberation Serif", "Times New Roman", serif;
+  --font-sans: "Noto Sans", "Liberation Sans", Arial, sans-serif;
+  --font-mono: "Noto Sans Mono", "Liberation Mono", monospace;
+  --radius-sm: 4px;
+  --space-base: 24px;
+  --code-padding-x: 16px;
+  --print-header: none;
+}
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  padding: var(--space-base) var(--space-base) var(--space-base) calc(var(--space-base) * 2);
+  font-family: var(--font-serif);
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--text-main);
+  background-color: var(--bg-page);
+}
+h1, h2, h3, h4, h5, h6 {
+  margin: 1.3em 0 0.5em;
+  font-family: var(--font-sans);
+  font-weight: bold;
+  line-height: 1.25;
+  overflow-wrap: break-word;
+}
+h1 { font-size: 28px; margin-top: 0; }
+h2 { font-size: 24px; }
+h2#toc { font-style: italic; }
+h3 { font-size: 20px; }
+h4 { font-size: 18px; }
+h5 { font-size: 16px; }
+h6 { font-size: 16px; font-style: italic; }
+p {
+  margin: 0.9em 0;
+  overflow-wrap: break-word;
+}
+hr {
+  height: 2px;
+  margin: 24px 0;
+  border: none;
+  background-color: var(--border-color);
+}
+blockquote {
+  margin: 1.2em 0;
+  padding: 12px 20px;
+  border-left: 4px solid var(--border-color);
+  background-color: var(--bg-subtle);
+  font-style: italic;
+  overflow-wrap: break-word;
+}
+blockquote &gt; :first-child { margin-top: 0; }
+blockquote &gt; :last-child { margin-bottom: 0; }
+mark {
+  padding: 2px 5px;
+  border-radius: var(--radius-sm);
+  background-color: var(--accent-mark);
+  color: var(--text-main);
+}
+a:link { color: #0000cd; text-underline-offset: 2px; }
+a:visited { color: #9400d3; }
+a:hover, a:focus { outline: none; color: #000080; }
+a:active { color: #dc143c; }
+ol, ul {
+  margin: 1em 0;
+  padding-left: 0;
+  list-style: none;
+  overflow-wrap: break-word;
+}
+li &gt; ol, li &gt; ul {
+  margin: 0.4em 0 0.5em;
+  padding-left: 22px;
+}
+li &gt; ol:last-child, li &gt; ul:last-child {
+  margin-bottom: 0;
+}
+ol {
+  counter-reset: custom-counter;
+}
+li {
+  position: relative;
+  padding-left: 26px;
+  margin-bottom: 0.4em;
+  overflow-wrap: break-word;
+}
+li:last-child {
+  margin-bottom: 0;
+}
+ul &gt; li::before {
+  content: "•";
+  position: absolute;
+  left: 8px;
+  top: 0;
+}
+ul ul &gt; li::before { content: "◦"; }
+ul ul ul &gt; li::before { content: "▪"; }
+ul.task-list &gt; li,
+ul &gt; li:has(input[type="checkbox"]) {
+  padding-left: 4px;
+}
+ul.task-list &gt; li::before,
+ul &gt; li:has(input[type="checkbox"])::before {
+  display: none;
+}
+ol &gt; li {
+  counter-increment: custom-counter;
+}
+ol &gt; li::before {
+  content: counter(custom-counter) ".";
+  position: absolute;
+  left: 0;
+  top: 0;
+  font-variant-numeric: tabular-nums;
+}
+ol ol &gt; li::before { content: counter(custom-counter, lower-alpha) "."; }
+ol ol ol &gt; li::before { content: counter(custom-counter, lower-roman) "."; }
+ol li input[type="checkbox"],
+ul li input[type="checkbox"] {
+  position: static;
+  display: inline-block;
+  width: 15px;
+  height: 15px;
+  margin: 0 8px 0 0;
+  vertical-align: -2px;
+  accent-color: var(--text-main);
+}
+dl { margin: 1.2em 0; }
+dt {
+  margin-top: 0.9em;
+  font-weight: bold;
+  overflow-wrap: anywhere;
+}
+dd {
+  margin: 0.25em 0 0;
+  padding-left: 14px;
+  border-left: 2px solid var(--border-subtle);
+  font-style: italic;
+  overflow-wrap: break-word;
+}
+code {
+  padding: 2px 5px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background-color: var(--bg-subtle);
+  font-family: var(--font-mono);
+  font-size: 0.88em;
+  line-height: 1;
+  overflow-wrap: anywhere;
+}
+div.code-lang {
+  display: block;
+  width: fit-content;
+  position: relative;
+  z-index: 2;
+  margin: 1.2em calc(var(--code-padding-x) + 1px) -10px auto;
+  padding: 3px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: 0.8em;
+  font-weight: bold;
+  line-height: 1;
+  background-color: var(--text-main);
+  color: var(--bg-page);
+}
+pre {
+  position: relative;
+  z-index: 1;
+  max-width: 100%;
+  margin: 1.2em 0;
+  padding: 16px var(--code-padding-x);
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-subtle);
+  overflow-x: auto;
+}
+div.code-lang + pre {
+  margin-top: 0;
+  padding-top: 22px;
+}
+pre &gt; code {
+  display: block;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  line-height: 1.45;
+  background-color: transparent;
+  white-space: pre;
+  overflow-wrap: normal;
+}
+table {
+  width: 100%;
+  margin: 1.5em 0;
+  border-collapse: collapse;
+  border: 1px solid var(--border-color);
+}
+th, td {
+  padding: 10px 14px;
+  text-align: left;
+  border: 1px solid var(--border-color);
+  overflow-wrap: anywhere;
+}
+thead tr {
+  background-color: var(--text-main);
+  color: var(--bg-page);
+}
+thead th {
+  font-family: var(--font-sans);
+  font-weight: bold;
+}
+
+tbody tr:nth-child(even) {
+  background-color: var(--bg-row-even);
+}
+tfoot tr {
+  background-color: var(--bg-subtle);
+  font-style: italic;
+}
+figure {
+  display: block;
+  margin: 1.2em 0;
+}
+figure img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+figcaption {
+  margin-top: 6px;
+  font-size: 0.9em;
+  font-style: italic;
+  color: var(--text-muted);
+  overflow-wrap: break-word;
+}
+ruby { ruby-position: over; ruby-align: space-around; }
+rt { letter-spacing: 0.05em; font-size: 0.55em; white-space: nowrap; }
+rp { display: none; }
+span[lang="ja"] { font-family: "Noto Serif CJK JP", "Source Han Serif JP", serif; }
+span[lang="zh-CN"], span[lang="zh-Hans"] { font-family: "Noto Serif CJK SC", "Source Han Serif SC", serif; }
+span[lang="zh-TW"], span[lang="zh-Hant"] { font-family: "Noto Serif CJK TC", "Source Han Serif TC", serif; }
+span[lang="zh-HK"] { font-family: "Noto Serif CJK HK", "Source Han Serif HK", serif; }
+span[lang="ko"] { font-family: "Noto Serif CJK KR", "Source Han Serif KR", serif; }</code></pre>
+<h3 id="markdowntohtmlportraitcss"><code>MarkdownToHTML.PORTRAIT_CSS</code></h3>
+<div class="code-lang">css</div><pre><code>/* Portrait PDF/Print */
+@page {
+  size: A4 portrait;
+  margin: 22mm 15mm 20mm 25mm;
+  @top-center {
+    content: var(--print-header);
+    font-family: var(--font-sans);
+    font-size: 8.5pt;
+    color: var(--text-muted);
+    vertical-align: bottom;
+    padding-bottom: 6pt;
+    border-bottom: 0.5pt solid var(--border-subtle);
+  }
+  @bottom-center {
+    content: counter(page);
+    font-family: var(--font-sans);
+    font-size: 8.5pt;
+    color: var(--text-muted);
+    vertical-align: top;
+    padding-top: 6pt;
+  }
+}
+@media print {
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  body {
+    padding: 0;
+    font-size: 11pt;
+    line-height: 1.45;
+    color: #000000;
+    background-color: #ffffff;
+  }
+  h1 { font-size: 20pt; }
+  h2 { font-size: 17pt; }
+  h3 { font-size: 14.5pt; }
+  h4 { font-size: 12.5pt; }
+  h5, h6 { font-size: 11pt; }
+  h1, h2, h3, h4, h5, h6, dt, div.code-lang {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+  blockquote, figure, pre, tr {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  p, li {
+    orphans: 3;
+    widows: 3;
+  }
+  pre {
+    overflow: visible;
+  }
+  pre &gt; code {
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
+  }
+  thead {
+    display: table-header-group;
+  }
+  tfoot {
+    display: table-footer-group;
+  }
+  a:link, a:visited {
+    color: #000000;
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+  }
+  a[href^="http"]::after {
+    content: " (" attr(href) ")";
+    font-family: var(--font-mono);
+    font-size: 0.85em;
+    color: var(--text-muted);
+    word-break: break-all;
+  }
+}</code></pre>
+<h3 id="markdowntohtmllandscapecss"><code>MarkdownToHTML.LANDSCAPE_CSS</code></h3>
+<div class="code-lang">css</div><pre><code>/* Landscape PDF/Print */
+@page {
+  size: A4 landscape;
+  margin: 16mm 16mm 16mm 32mm;
+  @top-center {
+    content: var(--print-header);
+    font-family: var(--font-sans);
+    font-size: 8.5pt;
+    color: var(--text-muted);
+    vertical-align: bottom;
+    padding-bottom: 5pt;
+    border-bottom: 0.5pt solid var(--border-subtle);
+  }
+  @bottom-center {
+    content: counter(page);
+    font-family: var(--font-sans);
+    font-size: 8.5pt;
+    color: var(--text-muted);
+    vertical-align: top;
+    padding-top: 5pt;
+  }
+}
+@media print {
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  body {
+    padding: 0;
+    font-size: 11pt;
+    line-height: 1.45;
+    color: #000000;
+    background-color: #ffffff;
+  }
+  h1 { font-size: 20pt; }
+  h2 { font-size: 17pt; }
+  h3 { font-size: 14.5pt; }
+  h4 { font-size: 12.5pt; }
+  h5, h6 { font-size: 11pt; }
+  h1, h2, h3, h4, h5, h6, dt, div.code-lang {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+  blockquote, figure, pre, tr {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  p, li {
+    orphans: 3;
+    widows: 3;
+  }
+  pre {
+    overflow: visible;
+  }
+  pre &gt; code {
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
+  }
+  thead {
+    display: table-header-group;
+  }
+  tfoot {
+    display: table-footer-group;
+  }
+  a:link, a:visited {
+    color: #000000;
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+  }
+  a[href^="http"]::after {
+    content: " (" attr(href) ")";
+    font-family: var(--font-mono);
+    font-size: 0.85em;
+    color: var(--text-muted);
+    word-break: break-all;
+  }
+}</code></pre>
+<h2 id="22-automatic-pdf-header">22. Automatic PDF Header</h2>
+<p>Every generated document ends <code>&lt;body&gt;</code> with the template script from the print-styles guide. It reads <code>&lt;meta name="author"&gt;</code>, <code>&lt;title&gt;</code> and <code>&lt;meta name="published"&gt;</code> (or <code>meta name="date"</code>), builds <code>author, title (published)</code> and stores it in the <code>--print-header</code> custom property used by the <code>@top-center</code> margin box. Missing metadata simply leaves the header empty.</p>
+<div class="code-lang">html</div><pre><code>&lt;script&gt;
+  (() =&gt; {
+    const author = document.querySelector('meta[name="author"]')?.content.trim() || '';
+    const title = document.title.trim() || '';
+    const published = document.querySelector('meta[name="published"], meta[name="date"]')?.content.trim() || '';
+
+    const base = [author, title].filter(Boolean).join(', ');
+    const headerText = published ? (base ? `${base} (${published})` : published) : base;
+
+    if (headerText) {
+      const safeText = headerText.replace(/\/g, '\\').replace(/"/g, '\"');
+      document.documentElement.style.setProperty('--print-header', `"${safeText}"`);
+    }
+  })();
+&lt;/script&gt;</code></pre>
+    <script>
+      (() => {
+        const author = document.querySelector('meta[name="author"]')?.content.trim() || '';
+        const title = document.title.trim() || '';
+        const published = document.querySelector('meta[name="published"], meta[name="date"]')?.content.trim() || '';
+
+        const base = [author, title].filter(Boolean).join(', ');
+        const headerText = published ? (base ? `${base} (${published})` : published) : base;
+
+        if (headerText) {
+          const safeText = headerText.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+          document.documentElement.style.setProperty('--print-header', `"${safeText}"`);
+        }
+      })();
+    </script>
+  </body>
+</html>
