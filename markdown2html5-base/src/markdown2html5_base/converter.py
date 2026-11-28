@@ -175,9 +175,6 @@ class MarkdownToHTML:
     }
 
     DOCUMENT_CSS: ClassVar[str]
-    PORTRAIT_CSS: ClassVar[str]
-    LANDSCAPE_CSS: ClassVar[str]
-    DOCUMENT_SCRIPT: ClassVar[str]
     PAGE_LAYOUTS: ClassVar[tuple[str, ...]] = ("portrait", "landscape")
     DEFAULT_PAGE_LAYOUT: ClassVar[str] = "portrait"
 
@@ -191,13 +188,6 @@ class MarkdownToHTML:
                 f"Unknown page orientation: {orientation!r} (choose from {valid})"
             )
         return value
-
-    @classmethod
-    def _css_for_orientation(cls, orientation: str) -> str:
-        """Return the base CSS together with the print CSS for an orientation."""
-        value = cls._normalize_orientation(orientation)
-        layout_css = cls.PORTRAIT_CSS if value == "portrait" else cls.LANDSCAPE_CSS
-        return cls.DOCUMENT_CSS + "\n" + layout_css
 
     def _heading_slug(self, title: str) -> str:
         """Turn visible heading text into a lowercase, URL-safe anchor id."""
@@ -250,12 +240,24 @@ class MarkdownToHTML:
             front_matter["published"] = front_matter.pop("date")
         return body, front_matter
 
+    @staticmethod
+    def _root_attributes(front_matter: dict[str, str], orientation: str) -> str:
+        """Return the root <html> attributes required by the selected orientation."""
+        lang = front_matter.get("lang", "")
+        if not lang and orientation == "landscape":
+            lang = "en"
+        attributes: list[str] = []
+        if lang:
+            attributes.append(f'lang="{lang}"')
+        if orientation == "landscape":
+            attributes.append('data-orientation="landscape"')
+        return f" {' '.join(attributes)}" if attributes else ""
+
     def _build_document(
         self, body: str, front_matter: dict[str, str], orientation: str
     ) -> str:
-        """Construct a complete HTML5 document with metadata, CSS and header script."""
-        lang = front_matter.get("lang", "")
-        lang_attr = f' lang="{lang}"' if lang else ""
+        """Construct a complete HTML5 document with metadata, styles and script."""
+        root_attributes = self._root_attributes(front_matter, orientation)
         meta_keys = ("author", "description", "keywords")
         head_elements = ['    <meta charset="utf-8" />']
         for key in meta_keys:
@@ -269,12 +271,10 @@ class MarkdownToHTML:
             head_elements.append(
                 f'    <meta name="published" content="{front_matter["published"]}" />'
             )
-        head_elements.append(
-            f"    <style>\n{self._css_for_orientation(orientation)}    </style>"
-        )
+        head_elements.append(self.DOCUMENT_CSS.rstrip("\n"))
         html_layout = [
             "<!doctype html>",
-            f"<html{lang_attr}>",
+            f"<html{root_attributes}>",
             "  <head>",
             *head_elements,
             "  </head>",
@@ -282,7 +282,7 @@ class MarkdownToHTML:
         ]
         if body:
             html_layout.append(body)
-        html_layout.extend([self.DOCUMENT_SCRIPT.rstrip("\n"), "  </body>", "</html>"])
+        html_layout.extend(["  </body>", "</html>"])
         return "\n".join(html_layout)
 
     @staticmethod
@@ -708,8 +708,9 @@ class MarkdownToHTML:
     ) -> str:
         """Convert Markdown into a complete, styled HTML5 document.
 
-        ``orientation`` (or its alias ``page_layout``) selects the print CSS:
-        ``"portrait"`` (default) or ``"landscape"``.
+        ``orientation`` (or its alias ``page_layout``) selects the document
+        mode: ``"portrait"`` (default) or ``"landscape"``. Landscape adds a
+        ``data-orientation`` attribute to the root element.
         """
         if not text.strip():
             return ""
@@ -1004,7 +1005,7 @@ class MarkdownToHTML:
         return self._build_document(final_html, front_matter, selected_orientation)
 
 
-MarkdownToHTML.DOCUMENT_CSS = r"""/* Base Rules */
+MarkdownToHTML.DOCUMENT_CSS = r"""    <style>
 :root {
   --bg-page: #ffffff;
   --bg-subtle: #f5f5f5;
@@ -1014,13 +1015,12 @@ MarkdownToHTML.DOCUMENT_CSS = r"""/* Base Rules */
   --border-color: #000000;
   --border-subtle: #e0e0e0;
   --accent-mark: #ffff00;
-  --font-serif: "Noto Serif", "Liberation Serif", "Times New Roman", serif;
-  --font-sans: "Noto Sans", "Liberation Sans", Arial, sans-serif;
-  --font-mono: "Noto Sans Mono", "Liberation Mono", monospace;
+  --font-serif: "Noto Serif", "Liberation Serif", "Times New Roman", Georgia, serif;
+  --font-sans: "Noto Sans", "Liberation Sans", system-ui, "Segoe UI", Arial, sans-serif;
+  --font-mono: "Noto Sans Mono", "Liberation Mono", ui-monospace, Menlo, Consolas, monospace;
   --radius-sm: 4px;
   --space-base: 24px;
   --code-padding-x: 16px;
-  --print-header: none;
 }
 *, *::before, *::after {
   box-sizing: border-box;
@@ -1139,7 +1139,6 @@ ul li input[type="checkbox"] {
   height: 15px;
   margin: 0 8px 0 0;
   vertical-align: -2px;
-  accent-color: var(--text-main);
 }
 dl { margin: 1.2em 0; }
 dt {
@@ -1188,7 +1187,6 @@ pre {
   padding: 16px var(--code-padding-x);
   border: 1px solid var(--border-color);
   background-color: var(--bg-subtle);
-  overflow-x: auto;
 }
 div.code-lang + pre {
   margin-top: 0;
@@ -1225,7 +1223,6 @@ thead th {
   font-family: var(--font-sans);
   font-weight: bold;
 }
-
 tbody tr:nth-child(even) {
   background-color: var(--bg-row-even);
 }
@@ -1249,7 +1246,6 @@ figcaption {
   color: var(--text-muted);
   overflow-wrap: break-word;
 }
-ruby { ruby-position: over; ruby-align: space-around; }
 rt { letter-spacing: 0.05em; font-size: 0.55em; white-space: nowrap; }
 rp { display: none; }
 span[lang="ja"] { font-family: "Noto Serif CJK JP", "Source Han Serif JP", serif; }
@@ -1257,23 +1253,23 @@ span[lang="zh-CN"], span[lang="zh-Hans"] { font-family: "Noto Serif CJK SC", "So
 span[lang="zh-TW"], span[lang="zh-Hant"] { font-family: "Noto Serif CJK TC", "Source Han Serif TC", serif; }
 span[lang="zh-HK"] { font-family: "Noto Serif CJK HK", "Source Han Serif HK", serif; }
 span[lang="ko"] { font-family: "Noto Serif CJK KR", "Source Han Serif KR", serif; }
-"""
-
-MarkdownToHTML.PORTRAIT_CSS = r"""/* Portrait PDF/Print */
 @page {
   size: A4 portrait;
   margin: 22mm 15mm 20mm 25mm;
-  @top-center {
-    content: var(--print-header);
+  @bottom-center {
+    content: "Page " counter(page) " of " counter(pages);
     font-family: var(--font-sans);
     font-size: 8.5pt;
     color: var(--text-muted);
-    vertical-align: bottom;
-    padding-bottom: 6pt;
-    border-bottom: 0.5pt solid var(--border-subtle);
+    vertical-align: top;
+    padding-top: 6pt;
   }
+}
+@page landscape {
+  size: A4 landscape;
+  margin: 18mm 20mm 18mm 20mm;
   @bottom-center {
-    content: counter(page);
+    content: "Page " counter(page) " of " counter(pages);
     font-family: var(--font-sans);
     font-size: 8.5pt;
     color: var(--text-muted);
@@ -1282,9 +1278,8 @@ MarkdownToHTML.PORTRAIT_CSS = r"""/* Portrait PDF/Print */
   }
 }
 @media print {
-  * {
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
+  [data-orientation="landscape"] {
+    page: landscape;
   }
   body {
     padding: 0;
@@ -1300,18 +1295,29 @@ MarkdownToHTML.PORTRAIT_CSS = r"""/* Portrait PDF/Print */
   h5, h6 { font-size: 11pt; }
   h1, h2, h3, h4, h5, h6, dt, div.code-lang {
     break-after: avoid;
-    page-break-after: avoid;
   }
-  blockquote, figure, pre, tr {
+  blockquote, figure, tr {
     break-inside: avoid;
-    page-break-inside: avoid;
   }
   p, li {
     orphans: 3;
     widows: 3;
   }
+  div.code-lang {
+    margin-bottom: 0;
+    border-bottom: none;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+  }
   pre {
     overflow: visible;
+    break-inside: auto;
+    box-decoration-break: clone;
+    orphans: 3;
+    widows: 3;
+  }
+  div.code-lang + pre {
+    padding-top: 16px;
   }
   pre > code {
     white-space: pre-wrap;
@@ -1336,100 +1342,18 @@ MarkdownToHTML.PORTRAIT_CSS = r"""/* Portrait PDF/Print */
     word-break: break-all;
   }
 }
-"""
-
-MarkdownToHTML.LANDSCAPE_CSS = r"""/* Landscape PDF/Print */
-@page {
-  size: A4 landscape;
-  margin: 16mm 16mm 16mm 32mm;
-  @top-center {
-    content: var(--print-header);
-    font-family: var(--font-sans);
-    font-size: 8.5pt;
-    color: var(--text-muted);
-    vertical-align: bottom;
-    padding-bottom: 5pt;
-    border-bottom: 0.5pt solid var(--border-subtle);
-  }
-  @bottom-center {
-    content: counter(page);
-    font-family: var(--font-sans);
-    font-size: 8.5pt;
-    color: var(--text-muted);
-    vertical-align: top;
-    padding-top: 5pt;
-  }
+    </style>
+    <style media="screen">
+ol li input[type="checkbox"],
+ul li input[type="checkbox"] {
+  accent-color: var(--text-main);
 }
-@media print {
-  * {
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
-  }
-  body {
-    padding: 0;
-    font-size: 11pt;
-    line-height: 1.45;
-    color: #000000;
-    background-color: #ffffff;
-  }
-  h1 { font-size: 20pt; }
-  h2 { font-size: 17pt; }
-  h3 { font-size: 14.5pt; }
-  h4 { font-size: 12.5pt; }
-  h5, h6 { font-size: 11pt; }
-  h1, h2, h3, h4, h5, h6, dt, div.code-lang {
-    break-after: avoid;
-    page-break-after: avoid;
-  }
-  blockquote, figure, pre, tr {
-    break-inside: avoid;
-    page-break-inside: avoid;
-  }
-  p, li {
-    orphans: 3;
-    widows: 3;
-  }
-  pre {
-    overflow: visible;
-  }
-  pre > code {
-    white-space: pre-wrap;
-    overflow-wrap: break-word;
-  }
-  thead {
-    display: table-header-group;
-  }
-  tfoot {
-    display: table-footer-group;
-  }
-  a:link, a:visited {
-    color: #000000;
-    text-decoration: underline;
-    text-decoration-thickness: 1px;
-  }
-  a[href^="http"]::after {
-    content: " (" attr(href) ")";
-    font-family: var(--font-mono);
-    font-size: 0.85em;
-    color: var(--text-muted);
-    word-break: break-all;
-  }
+pre {
+  overflow-x: auto;
 }
-"""
-
-MarkdownToHTML.DOCUMENT_SCRIPT = r"""    <script>
-      (() => {
-        const author = document.querySelector('meta[name="author"]')?.content.trim() || '';
-        const title = document.title.trim() || '';
-        const published = document.querySelector('meta[name="published"], meta[name="date"]')?.content.trim() || '';
-
-        const base = [author, title].filter(Boolean).join(', ');
-        const headerText = published ? (base ? `${base} (${published})` : published) : base;
-
-        if (headerText) {
-          const safeText = headerText.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
-          document.documentElement.style.setProperty('--print-header', `"${safeText}"`);
-        }
-      })();
-    </script>
+ruby {
+  ruby-position: over;
+  ruby-align: space-around;
+}
+    </style>
 """

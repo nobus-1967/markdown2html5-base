@@ -1,6 +1,6 @@
 [project]
 name = "markdown2html5-base"
-version = "1.0.0"
+version = "1.1.0"
 description = "A foundational library for converting Markdown text into clean, modern HTML5 markup."
 readme = "README.md"
 requires-python = ">=3.8"

@@ -43,11 +43,34 @@ markdown2html5-base input.md --page landscape -o output.html
 echo "# Hello" | markdown2html5-base
 ```
 
-### CSS and Print Headers
+### CSS and Document Orientation
 
-Every conversion produces a complete HTML5 document with CSS3 print styles embedded in `<head>`; there is no longer an option to emit bare, unstyled HTML. Use `--page portrait` or `--page landscape`; portrait is the default. In Python the same choice is `MarkdownToHTML().convert(text, orientation="landscape")`.
+Every conversion produces a complete HTML5 document with two `<style>` blocks embedded in `<head>`; there is no option to emit bare, unstyled HTML. `MarkdownToHTML.DOCUMENT_CSS` holds both blocks verbatim. The first block contains the screen and print rules, including `@page`, `@page landscape` and `@media print`. The `media="screen"` block carries screen-only rules such as `accent-color`, `pre { overflow-x: auto; }` and ruby positioning.
 
-The selected stylesheet starts with a `/* Portrait PDF/Print */` or `/* Landscape PDF/Print */` comment and contains the matching `@page` margins and `@media print` rules. A script at the end of `<body>` reads `<title>`, `<meta name="author">` and `<meta name="published">` (or `date`) and sets the `--print-header` custom property used by Chromium's PDF header.
+Portrait is the default and uses the standard styles with no root attribute. `--page landscape` (or `orientation="landscape"` in Python) keeps the same stylesheet and adds a root attribute:
+
+```html
+<!doctype html>
+<html lang="en" data-orientation="landscape">
+  <head>
+```
+
+The orientation name is validated and normalised case-insensitively; an unknown value raises `ValueError`. The built-in stylesheet prints bottom-centre page numbers.
+
+### HTML to PDF with Google Chrome / Chromium
+
+The generated HTML can be printed to PDF directly by Google Chrome or Chromium. Use an HTML file produced with the desired `--page` mode and add `--no-pdf-header-footer` to suppress the browser's built-in date, title and footer. The stylesheet's bottom-centre `Page X of Y` margin box is still rendered.
+
+Use the executable name available in your distribution:
+
+```bash
+google-chrome-stable --headless --no-pdf-header-footer --print-to-pdf=output.pdf input.html
+google-chrome --headless --no-pdf-header-footer --print-to-pdf=output.pdf input.html
+chromium --headless --no-pdf-header-footer --print-to-pdf=output.pdf input.html
+chromium-browser --headless --no-pdf-header-footer --print-to-pdf=output.pdf input.html
+```
+
+Older Chromium releases may require `--print-to-pdf-no-header` instead of `--no-pdf-header-footer`.
 
 ---
 
@@ -212,7 +235,7 @@ published: 2026-25-11
 * `lang` becomes the `<html lang="...">` attribute (a valid BCP 47 tag).
 * `title` becomes the `<title>` element.
 * `author`, `description`, `keywords`, and `published` become `<meta name="..." content="..." />` tags. `date` is accepted as an alias for `published`.
-* A `<style>` block with CSS3 screen/print rules (fonts, headings, code blocks, tables, ruby, etc.) is always embedded in `<head>`.
+* Two `<style>` blocks with CSS3 screen/print rules (fonts, headings, code blocks, tables, ruby, etc.) are always embedded in `<head>`.
 
 ```html
 <!doctype html>
@@ -225,14 +248,14 @@ published: 2026-25-11
     <title>My Document</title>
     <meta name="published" content="2026-08-09" />
     <style>
-      /* default viewing-friendly CSS */
+      /* screen and print CSS */
+    </style>
+    <style media="screen">
+      /* screen-only CSS */
     </style>
   </head>
   <body>
     ...
-    <script>
-      /* automatic --print-header setup */
-    </script>
   </body>
 </html>
 ```
@@ -267,14 +290,12 @@ If you need to render a Markdown symbol literally, escape it by prefixing with a
 
 ### 9. CSS Styles and Print Orientation
 
-Every output document contains one `<style>` block. It is assembled from:
+Every output document contains two `<style>` blocks, stored verbatim in `MarkdownToHTML.DOCUMENT_CSS`:
 
-* `MarkdownToHTML.DOCUMENT_CSS` — starts with `/* Base Rules */`, then base CSS3 rules for screen/WebKitGTK (`:root` variables, typography, lists, code blocks, tables, figures, ruby and CJK font stacks).
-* `MarkdownToHTML.PORTRAIT_CSS` — selected by default; begins with `/* Portrait PDF/Print */` and defines A4 portrait `@page` margins plus `@media print` rules.
-* `MarkdownToHTML.LANDSCAPE_CSS` — selected with `orientation="landscape"`; begins with `/* Landscape PDF/Print */` and defines A4 landscape `@page` margins plus `@media print` rules.
+* the main block with `:root` variables, typography, lists, code blocks, tables, figures, CJK font stacks, `@page`, `@page landscape` and `@media print`;
+* a `media="screen"` block with `accent-color`, `pre { overflow-x: auto; }` and ruby positioning.
 
-The orientation is validated and normalised case-insensitively. On the CLI use `--page portrait` or `--page landscape`; in Python use
-`MarkdownToHTML().convert(text, orientation="landscape")`. An unknown value raises `ValueError`.
+There are no separate portrait or landscape stylesheets. Portrait is the default; `--page landscape` (or `orientation="landscape"` in Python) only adds `data-orientation="landscape"` to `<html>`. The orientation is validated and normalised case-insensitively; an unknown value raises `ValueError`.
 
 ---
 

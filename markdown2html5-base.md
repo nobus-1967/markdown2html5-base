@@ -28,7 +28,6 @@ This reference covers all `markdown2html5-base` features.
 * [19. Backslash Escaping](#19-backslash-escaping)
 * [20. Paragraphs](#20-paragraphs)
 * [21. CSS Styles and Print Orientation](#21-css-styles-and-print-orientation)
-* [22. Automatic PDF Header](#22-automatic-pdf-header)
 
 ## Programmatic Usage
 
@@ -406,13 +405,15 @@ Empty line after list close => `<!-- -->` preserves whitespace.
 
 ## 21. CSS Styles and Print Orientation
 
-Every document produced by the converter contains a single `<style>` block; emitting an unstyled HTML fragment is no longer supported. The block is assembled from three parts available as class attributes on `MarkdownToHTML`:
+Every document produced by the converter contains two `<style>` blocks, stored verbatim in `MarkdownToHTML.DOCUMENT_CSS`. There are no separate portrait or landscape stylesheets. The main block holds the screen and print rules, including `@page`, `@page landscape` and `@media print`; the `media="screen"` block holds screen-only rules such as `accent-color`, `pre { overflow-x: auto; }` and ruby positioning.
 
-| Attribute       | Purpose                                                                                                                                                                  |
-| ---------       | -------                                                                                                                                                                  |
-| `DOCUMENT_CSS`  | Starts with `/* Base Rules */`, then base CSS3 rules for screen/WebKitGTK: custom properties, typography, lists, code blocks, tables, figures, ruby and CJK font stacks. |
-| `PORTRAIT_CSS`  | Starts with `/* Portrait PDF/Print */`; A4 portrait `@page` margins and `@media print` rules.                                                                            |
-| `LANDSCAPE_CSS` | Starts with `/* Landscape PDF/Print */`; A4 landscape `@page` margins and `@media print` rules.                                                                          |
+Portrait is the default and keeps the standard root element. `--page landscape` (or `orientation="landscape"` in Python) only adds `data-orientation="landscape"` to `<html>`:
+
+```html
+<!doctype html>
+<html lang="en" data-orientation="landscape">
+  <head>
+```
 
 The orientation name is stripped and lowercased, then validated against `("portrait", "landscape")`. An unknown value raises `ValueError`.
 
@@ -421,8 +422,8 @@ Python API:
 ```python
 from markdown2html5_base import MarkdownToHTML
 
-html = MarkdownToHTML().convert(markdown_text)                    # portrait
-html = MarkdownToHTML().convert(markdown_text, "landscape")       # landscape
+html = MarkdownToHTML().convert(markdown_text)                           # portrait
+html = MarkdownToHTML().convert(markdown_text, "landscape")              # landscape
 html = MarkdownToHTML().convert(markdown_text, page_layout="landscape")  # alias
 ```
 
@@ -435,8 +436,8 @@ markdown2html5-base input.md --page landscape -o output.html
 
 ### `MarkdownToHTML.DOCUMENT_CSS`
 
-```css
-/* Base Rules */
+```html
+<style>
 :root {
   --bg-page: #ffffff;
   --bg-subtle: #f5f5f5;
@@ -446,13 +447,12 @@ markdown2html5-base input.md --page landscape -o output.html
   --border-color: #000000;
   --border-subtle: #e0e0e0;
   --accent-mark: #ffff00;
-  --font-serif: "Noto Serif", "Liberation Serif", "Times New Roman", serif;
-  --font-sans: "Noto Sans", "Liberation Sans", Arial, sans-serif;
-  --font-mono: "Noto Sans Mono", "Liberation Mono", monospace;
+  --font-serif: "Noto Serif", "Liberation Serif", "Times New Roman", Georgia, serif;
+  --font-sans: "Noto Sans", "Liberation Sans", system-ui, "Segoe UI", Arial, sans-serif;
+  --font-mono: "Noto Sans Mono", "Liberation Mono", ui-monospace, Menlo, Consolas, monospace;
   --radius-sm: 4px;
   --space-base: 24px;
   --code-padding-x: 16px;
-  --print-header: none;
 }
 *, *::before, *::after {
   box-sizing: border-box;
@@ -571,7 +571,6 @@ ul li input[type="checkbox"] {
   height: 15px;
   margin: 0 8px 0 0;
   vertical-align: -2px;
-  accent-color: var(--text-main);
 }
 dl { margin: 1.2em 0; }
 dt {
@@ -620,7 +619,6 @@ pre {
   padding: 16px var(--code-padding-x);
   border: 1px solid var(--border-color);
   background-color: var(--bg-subtle);
-  overflow-x: auto;
 }
 div.code-lang + pre {
   margin-top: 0;
@@ -657,7 +655,6 @@ thead th {
   font-family: var(--font-sans);
   font-weight: bold;
 }
-
 tbody tr:nth-child(even) {
   background-color: var(--bg-row-even);
 }
@@ -681,7 +678,6 @@ figcaption {
   color: var(--text-muted);
   overflow-wrap: break-word;
 }
-ruby { ruby-position: over; ruby-align: space-around; }
 rt { letter-spacing: 0.05em; font-size: 0.55em; white-space: nowrap; }
 rp { display: none; }
 span[lang="ja"] { font-family: "Noto Serif CJK JP", "Source Han Serif JP", serif; }
@@ -689,26 +685,23 @@ span[lang="zh-CN"], span[lang="zh-Hans"] { font-family: "Noto Serif CJK SC", "So
 span[lang="zh-TW"], span[lang="zh-Hant"] { font-family: "Noto Serif CJK TC", "Source Han Serif TC", serif; }
 span[lang="zh-HK"] { font-family: "Noto Serif CJK HK", "Source Han Serif HK", serif; }
 span[lang="ko"] { font-family: "Noto Serif CJK KR", "Source Han Serif KR", serif; }
-```
-
-### `MarkdownToHTML.PORTRAIT_CSS`
-
-```css
-/* Portrait PDF/Print */
 @page {
   size: A4 portrait;
   margin: 22mm 15mm 20mm 25mm;
-  @top-center {
-    content: var(--print-header);
+  @bottom-center {
+    content: "Page " counter(page) " of " counter(pages);
     font-family: var(--font-sans);
     font-size: 8.5pt;
     color: var(--text-muted);
-    vertical-align: bottom;
-    padding-bottom: 6pt;
-    border-bottom: 0.5pt solid var(--border-subtle);
+    vertical-align: top;
+    padding-top: 6pt;
   }
+}
+@page landscape {
+  size: A4 landscape;
+  margin: 18mm 20mm 18mm 20mm;
   @bottom-center {
-    content: counter(page);
+    content: "Page " counter(page) " of " counter(pages);
     font-family: var(--font-sans);
     font-size: 8.5pt;
     color: var(--text-muted);
@@ -717,9 +710,8 @@ span[lang="ko"] { font-family: "Noto Serif CJK KR", "Source Han Serif KR", serif
   }
 }
 @media print {
-  * {
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
+  [data-orientation="landscape"] {
+    page: landscape;
   }
   body {
     padding: 0;
@@ -735,18 +727,29 @@ span[lang="ko"] { font-family: "Noto Serif CJK KR", "Source Han Serif KR", serif
   h5, h6 { font-size: 11pt; }
   h1, h2, h3, h4, h5, h6, dt, div.code-lang {
     break-after: avoid;
-    page-break-after: avoid;
   }
-  blockquote, figure, pre, tr {
+  blockquote, figure, tr {
     break-inside: avoid;
-    page-break-inside: avoid;
   }
   p, li {
     orphans: 3;
     widows: 3;
   }
+  div.code-lang {
+    margin-bottom: 0;
+    border-bottom: none;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+  }
   pre {
     overflow: visible;
+    break-inside: auto;
+    box-decoration-break: clone;
+    orphans: 3;
+    widows: 3;
+  }
+  div.code-lang + pre {
+    padding-top: 16px;
   }
   pre > code {
     white-space: pre-wrap;
@@ -771,108 +774,18 @@ span[lang="ko"] { font-family: "Noto Serif CJK KR", "Source Han Serif KR", serif
     word-break: break-all;
   }
 }
-```
-
-### `MarkdownToHTML.LANDSCAPE_CSS`
-
-```css
-/* Landscape PDF/Print */
-@page {
-  size: A4 landscape;
-  margin: 16mm 16mm 16mm 32mm;
-  @top-center {
-    content: var(--print-header);
-    font-family: var(--font-sans);
-    font-size: 8.5pt;
-    color: var(--text-muted);
-    vertical-align: bottom;
-    padding-bottom: 5pt;
-    border-bottom: 0.5pt solid var(--border-subtle);
-  }
-  @bottom-center {
-    content: counter(page);
-    font-family: var(--font-sans);
-    font-size: 8.5pt;
-    color: var(--text-muted);
-    vertical-align: top;
-    padding-top: 5pt;
-  }
+</style>
+<style media="screen">
+ol li input[type="checkbox"],
+ul li input[type="checkbox"] {
+  accent-color: var(--text-main);
 }
-@media print {
-  * {
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
-  }
-  body {
-    padding: 0;
-    font-size: 11pt;
-    line-height: 1.45;
-    color: #000000;
-    background-color: #ffffff;
-  }
-  h1 { font-size: 20pt; }
-  h2 { font-size: 17pt; }
-  h3 { font-size: 14.5pt; }
-  h4 { font-size: 12.5pt; }
-  h5, h6 { font-size: 11pt; }
-  h1, h2, h3, h4, h5, h6, dt, div.code-lang {
-    break-after: avoid;
-    page-break-after: avoid;
-  }
-  blockquote, figure, pre, tr {
-    break-inside: avoid;
-    page-break-inside: avoid;
-  }
-  p, li {
-    orphans: 3;
-    widows: 3;
-  }
-  pre {
-    overflow: visible;
-  }
-  pre > code {
-    white-space: pre-wrap;
-    overflow-wrap: break-word;
-  }
-  thead {
-    display: table-header-group;
-  }
-  tfoot {
-    display: table-footer-group;
-  }
-  a:link, a:visited {
-    color: #000000;
-    text-decoration: underline;
-    text-decoration-thickness: 1px;
-  }
-  a[href^="http"]::after {
-    content: " (" attr(href) ")";
-    font-family: var(--font-mono);
-    font-size: 0.85em;
-    color: var(--text-muted);
-    word-break: break-all;
-  }
+pre {
+  overflow-x: auto;
 }
-```
-
-## 22. Automatic PDF Header
-
-Every generated document ends `<body>` with the template script from the print-styles guide. It reads `<meta name="author">`, `<title>` and `<meta name="published">` (or `meta name="date"`), builds `author, title (published)` and stores it in the `--print-header` custom property used by the `@top-center` margin box. Missing metadata simply leaves the header empty.
-
-```html
-<script>
-  (() => {
-    const author = document.querySelector('meta[name="author"]')?.content.trim() || '';
-    const title = document.title.trim() || '';
-    const published = document.querySelector('meta[name="published"], meta[name="date"]')?.content.trim() || '';
-
-    const base = [author, title].filter(Boolean).join(', ');
-    const headerText = published ? (base ? `${base} (${published})` : published) : base;
-
-    if (headerText) {
-      const safeText = headerText.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
-      document.documentElement.style.setProperty('--print-header', `"${safeText}"`);
-    }
-  })();
-</script>
+ruby {
+  ruby-position: over;
+  ruby-align: space-around;
+}
+</style>
 ```

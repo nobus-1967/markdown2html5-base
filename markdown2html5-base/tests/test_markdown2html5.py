@@ -5,14 +5,17 @@ import sys
 
 import pytest
 
+from markdown2html5_base import __version__
 from markdown2html5_base.converter import MarkdownToHTML
+
+STYLES = MarkdownToHTML.DOCUMENT_CSS.rstrip("\n")
 
 
 def body(html: str) -> str:
-    """Return the document body content before the injected header script."""
+    """Return the document body content between the body tags."""
     if not html:
         return ""
-    return html.split("  <body>\n", 1)[1].rsplit("\n    <script>", 1)[0]
+    return html.split("  <body>\n", 1)[1].rsplit("\n  </body>", 1)[0]
 
 
 @pytest.fixture
@@ -436,7 +439,7 @@ def test_typography_arrows(converter):
 
 
 def test_front_matter_full_document(converter):
-    """Verify that metadata, portrait CSS and the header script form a complete document."""
+    """Verify that metadata and embedded styles form a complete document."""
     md_text = (
         "---\n"
         "lang: en\n"
@@ -449,7 +452,6 @@ def test_front_matter_full_document(converter):
         "# Hello\n"
         "Body text."
     )
-    script = MarkdownToHTML.DOCUMENT_SCRIPT.rstrip("\n")
     expected = (
         "<!doctype html>\n"
         '<html lang="en">\n'
@@ -460,12 +462,11 @@ def test_front_matter_full_document(converter):
         '    <meta name="keywords" content="one, two, three" />\n'
         "    <title>My Document</title>\n"
         '    <meta name="published" content="2026-08-09" />\n'
-        f"    <style>\n{MarkdownToHTML._css_for_orientation('portrait')}    </style>\n"
+        f"{STYLES}\n"
         "  </head>\n"
         "  <body>\n"
         '<h1 id="hello">Hello</h1>\n'
         "<p>Body text.</p>\n"
-        f"{script}\n"
         "  </body>\n"
         "</html>"
     )
@@ -489,22 +490,15 @@ def test_front_matter_only_lang(converter):
     md_text = "---\nlang: ru\n---\n# Привет"
     output = converter.convert(md_text)
     assert output.startswith('<!doctype html>\n<html lang="ru">\n')
-    assert (
-        f"<style>\n{MarkdownToHTML._css_for_orientation('portrait')}    </style>"
-        in output
-    )
+    assert STYLES in output
     assert body(output) == '<h1 id="привет">Привет</h1>'
 
 
 def test_no_front_matter_returns_styled_document(converter):
-    """Verify that plain markdown also becomes a full document with CSS and script."""
+    """Verify that plain markdown also becomes a full document with CSS."""
     output = converter.convert("# Hello")
     assert output.startswith("<!doctype html>")
-    assert (
-        f"<style>\n{MarkdownToHTML._css_for_orientation('portrait')}    </style>"
-        in output
-    )
-    assert MarkdownToHTML.DOCUMENT_SCRIPT.rstrip("\n") in output
+    assert STYLES in output
     assert body(output) == '<h1 id="hello">Hello</h1>'
 
 
@@ -519,43 +513,62 @@ def test_front_matter_always_embeds_style(converter):
     """Verify that front matter always yields a document with the selected print CSS."""
     md_text = "---\nlang: en\n---\n# Hi"
     output = converter.convert(md_text)
-    assert (
-        f"<style>\n{MarkdownToHTML._css_for_orientation('portrait')}    </style>"
-        in output
-    )
+    assert STYLES in output
     assert body(output) == '<h1 id="hi">Hi</h1>'
 
 
-def test_portrait_orientation_css(converter):
-    """Verify that the default output uses the portrait print media rules."""
+def test_embedded_styles_are_complete(converter):
+    """Verify that both style blocks are embedded verbatim in every document."""
     output = converter.convert("# Hi")
-    assert "/* Base Rules */" in output
-    assert output.index("/* Base Rules */") < output.index("/* Portrait PDF/Print */")
-    assert "/* Portrait PDF/Print */" in output
-    assert "size: A4 portrait;" in output
-    assert "margin: 22mm 15mm 20mm 25mm;" in output
-    assert "/* Landscape PDF/Print */" not in output
-    assert "size: A4 landscape;" not in output
-
-
-def test_landscape_orientation_css(converter):
-    """Verify that the landscape orientation swaps in the landscape print media rules."""
-    output = converter.convert("# Hi", orientation="landscape")
-    assert "/* Base Rules */" in output
-    assert output.index("/* Base Rules */") < output.index("/* Landscape PDF/Print */")
-    assert "/* Landscape PDF/Print */" in output
-    assert "size: A4 landscape;" in output
-    assert "margin: 16mm 16mm 16mm 32mm;" in output
+    assert STYLES in output
+    assert output.count("<style>") == 1
+    assert output.count('<style media="screen">') == 1
+    assert output.index("<style>") < output.index('<style media="screen">')
+    assert "@page {" in output
+    assert "@page landscape {" in output
+    assert "@media print" in output
+    assert '[data-orientation="landscape"]' in output
+    assert "accent-color: var(--text-main);" in output
+    assert "pre {\n  overflow-x: auto;\n}" in output
+    assert "ruby {" in output
     assert "/* Portrait PDF/Print */" not in output
-    assert "size: A4 portrait;" not in output
+    assert "/* Landscape PDF/Print */" not in output
+
+
+def test_portrait_orientation_uses_default_root(converter):
+    """Verify that portrait output keeps the default root element untouched."""
+    output = converter.convert("# Hi")
+    assert output.startswith("<!doctype html>\n<html>\n")
+    assert '<html lang="en"' not in output
+
+
+def test_landscape_orientation_marks_root(converter):
+    """Verify that landscape output selects the named print page via the root element."""
+    output = converter.convert("# Hi", orientation="landscape")
+    assert output.startswith(
+        '<!doctype html>\n<html lang="en" data-orientation="landscape">\n'
+    )
+
+
+def test_landscape_preserves_front_matter_language(converter):
+    """Verify that a front matter language still controls the root language attribute."""
+    output = converter.convert("---\nlang: ru\n---\n# Привет", "landscape")
+    assert output.startswith(
+        '<!doctype html>\n<html lang="ru" data-orientation="landscape">\n'
+    )
 
 
 def test_orientation_aliases_and_normalisation(converter):
     """Verify case-insensitive orientation names and the page_layout alias."""
-    landscape = converter.convert("# Hi", " LANDSCAPE ")
-    assert "/* Landscape PDF/Print */" in landscape
-    assert "/* Landscape PDF/Print */" in converter.convert(
-        "# Hi", page_layout="landscape"
+    landscape_root = '<html lang="en" data-orientation="landscape">'
+    assert converter.convert("# Hi", " LANDSCAPE ").startswith(
+        f"<!doctype html>\n{landscape_root}\n"
+    )
+    assert converter.convert("# Hi", page_layout="landscape").startswith(
+        f"<!doctype html>\n{landscape_root}\n"
+    )
+    assert converter.convert("# Hi", " PORTRAIT ").startswith(
+        "<!doctype html>\n<html>\n"
     )
 
 
@@ -565,14 +578,11 @@ def test_invalid_orientation_is_rejected(converter):
         converter.convert("# Hi", orientation="square")
 
 
-def test_automatic_header_script(converter):
-    """Verify that the template script derives the print header from document metadata."""
-    md_text = "---\ntitle: My Document\nauthor: Jane Doe\npublished: 2026\n---\nBody"
-    output = converter.convert(md_text)
-    assert 'meta[name="author"]' in output
-    assert 'meta[name="published"], meta[name="date"]' in output
-    assert "--print-header" in output
-    assert "const safeText = headerText.replace" in output
+def test_no_header_script(converter):
+    """Verify that generated documents contain no obsolete header script."""
+    output = converter.convert("# Hi")
+    assert "<script>" not in output
+    assert "--print-header" not in output
 
 
 def test_escape_characters(converter):
@@ -698,10 +708,10 @@ def test_inline_language_spans(converter):
 
 
 def test_cli_page_orientation():
-    """Verify that --page portrait/landscape selects the matching print CSS."""
-    for layout, marker in (
-        ("portrait", "/* Portrait PDF/Print */"),
-        ("landscape", "/* Landscape PDF/Print */"),
+    """Verify that --page portrait/landscape sets the expected root element."""
+    for layout, root in (
+        ("portrait", "<html>"),
+        ("landscape", '<html lang="en" data-orientation="landscape">'),
     ):
         result = subprocess.run(
             [sys.executable, "-m", "markdown2html5_base.cli", "--page", layout],
@@ -710,7 +720,7 @@ def test_cli_page_orientation():
             capture_output=True,
             check=True,
         )
-        assert marker in result.stdout
+        assert result.stdout.startswith(f"<!doctype html>\n{root}\n")
 
 
 def test_toc_links_resolve_to_heading_ids(converter):
@@ -727,3 +737,8 @@ def test_toc_links_resolve_to_heading_ids(converter):
     assert '<a href="#1-headings-h1-h6">1. Headings (H1-H6)</a>' in output
     assert '<h2 id="intro">Intro</h2>' in output
     assert '<h2 id="1-headings-h1-h6">1. Headings (H1-H6)</h2>' in output
+
+
+def test_package_version():
+    """Verify that the published package version matches the 1.1.0 stylesheet release."""
+    assert __version__ == "1.1.0"

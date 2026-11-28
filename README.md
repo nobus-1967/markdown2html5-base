@@ -309,6 +309,8 @@ if __name__ == "__main__":
 
 `markdown2html5-base` is created for use with [Mark Editor](https://github.com/nobus-1967/mark_editor) and [Mark Editor TUI](https://github.com/nobus-1967/mark_editor_tui) but it can be used as a separate tool.
 
+The generated HTML can be printed to PDF directly by Google Chrome or Chromium. See [README](./markdown2html5-base/README.md) for details.
+
 ## Acknowledgements
 
 Thanks to  Matt Cone for his excellent [Markdown Guide](https://www.markdownguide.org/)!

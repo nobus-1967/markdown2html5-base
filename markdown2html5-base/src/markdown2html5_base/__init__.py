@@ -7,4 +7,4 @@ from .converter import (
 )
 
 __all__ = ["DEFAULT_PAGE_LAYOUT", "PAGE_LAYOUTS", "MarkdownToHTML"]
-__version__ = "1.0.0"
+__version__ = "1.1.0"
